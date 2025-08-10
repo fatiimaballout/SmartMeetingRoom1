@@ -1,62 +1,62 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SmartMeetingRoom1.Dtos;
 using SmartMeetingRoom1.Interfaces;
+using System.Security.Claims;
 
+[ApiController]
+[Route("api/[controller]")]
+[Authorize] 
+public class UsersController : ControllerBase
+{
+    private readonly IUser _service;
+    public UsersController(IUser service) => _service = service;
 
-    [ApiController]
-    [Route("api/[controller]")]
-    public class UsersController : ControllerBase
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<UserDto>> Get(int id)
     {
-        private readonly IUser _service;
+        var myId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var isAdmin = User.IsInRole("Admin");
+        if (!isAdmin && myId != id.ToString()) return Forbid(); 
 
-        public UsersController(IUser service)
+        var user = await _service.GetByIdAsync(id);
+        if (user == null) return NotFound();
+        return Ok(user);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
         {
-            _service = service;
+            var created = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
+        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+    }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<UserDto>> Get(int id)
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
         {
-            var user = await _service.GetByIdAsync(id);
-            if (user == null) return NotFound();
-            return Ok(user);
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto)
-        {
-            try
-            {
-                var created = await _service.CreateAsync(dto);
-                return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
-        {
-            try
-            {
-                var ok = await _service.UpdateAsync(id, dto);
-                if (!ok) return NotFound();
-                return NoContent();
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var ok = await _service.DeleteAsync(id);
+            var ok = await _service.UpdateAsync(id, dto);
             if (!ok) return NotFound();
             return NoContent();
         }
+        catch (ArgumentException ex) { return BadRequest(ex.Message); }
     }
 
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ok = await _service.DeleteAsync(id);
+        if (!ok) return NotFound();
+        return NoContent();
+    }
+}
