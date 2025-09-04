@@ -9,6 +9,7 @@ using SmartMeetingRoom1.Services;
 using SmartMeetingRoom1.Interfaces;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+
 namespace SmartMeetingRoom1
 {
     public class Program
@@ -17,11 +18,11 @@ namespace SmartMeetingRoom1
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            
+            // ---------------- DB ----------------
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-           
+            // ------------- Identity -------------
             builder.Services.AddIdentityCore<ApplicationUser>(o =>
             {
                 o.Password.RequiredLength = 6;
@@ -33,7 +34,7 @@ namespace SmartMeetingRoom1
             .AddSignInManager()
             .AddDefaultTokenProviders();
 
-           
+            // --------------- JWT ----------------
             var jwt = builder.Configuration.GetSection("Jwt");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
 
@@ -56,7 +57,7 @@ namespace SmartMeetingRoom1
 
             builder.Services.AddAuthorization();
 
-            
+            // ------------- DI Services ----------
             builder.Services.AddScoped<IMeeting, IMeetingServices>();
             builder.Services.AddScoped<IRoom, IRoomServices>();
             builder.Services.AddScoped<IUser, IUserServices>();
@@ -65,20 +66,19 @@ namespace SmartMeetingRoom1
             builder.Services.AddScoped<IMeetingAttendee, IMeetingAttendeeServices>();
             builder.Services.AddScoped<IActionItem, IActionItemServices>();
             builder.Services.AddScoped<IAttachment, IAttachmentServices>();
-            builder.Services.AddScoped<IToken,ITokenService>();
+            builder.Services.AddScoped<IToken, ITokenService>();
 
-           
+            // -------- Controllers (secured by default) -------
             builder.Services.AddControllers(o =>
             {
                 o.Filters.Add(new AuthorizeFilter());
             });
 
-            
+            // --------------- Swagger -------------
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Smart Meeting Room API", Version = "v1" });
-
                 var securityScheme = new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
@@ -97,7 +97,7 @@ namespace SmartMeetingRoom1
 
             var app = builder.Build();
 
-           
+            // ---------- DB migrate + seed roles ----------
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -111,19 +111,25 @@ namespace SmartMeetingRoom1
 
             app.UseHttpsRedirection();
 
-           
-            app.UseAuthentication();   
+            // ======= Serve your front-end from wwwroot =======
+            // Looks for index.html (and then login.html if you prefer) at the site root.
+            app.UseDefaultFiles();   // uses wwwroot by default
+            app.UseStaticFiles();    // serve /login.html, /register.html, /css/*, /js/*
+
+            app.UseAuthentication();
             app.UseAuthorization();
 
+            // Swagger at /docs to avoid clashing with your site root
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.RoutePrefix = "";
+                c.RoutePrefix = "docs";
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
                 c.DocumentTitle = "Smart Meeting Room API";
             });
 
             app.MapControllers();
+
             app.Run();
         }
     }

@@ -36,22 +36,32 @@ namespace SmartMeetingRoom1.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
             if (await _userManager.FindByEmailAsync(dto.Email) != null)
                 return Conflict("Email already in use.");
 
-            var user = new ApplicationUser { UserName = dto.UserName, Email = dto.Email };
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded) return BadRequest(result.Errors);
+            var userName = string.IsNullOrWhiteSpace(dto.UserName) ? dto.Email : dto.UserName;
 
-            
+            var user = new ApplicationUser
+            {
+                UserName = userName,
+                Email = dto.Email,
+                // If your ApplicationUser has FullName and your DTO includes it:
+                // FullName = dto.FullName
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
             var role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role;
             if (!await _db.Roles.AnyAsync(r => r.Name == role)) role = "User";
             await _userManager.AddToRoleAsync(user, role);
 
-            return StatusCode(201);
+            return StatusCode(201); // Created (no body is fine for your current front-end)
         }
+
 
         [AllowAnonymous]
         [HttpPost("login")]

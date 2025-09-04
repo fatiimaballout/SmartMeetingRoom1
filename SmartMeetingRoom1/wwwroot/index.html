@@ -1,0 +1,41 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+    <header class="topbar">
+        <h1>Smart Meeting Room</h1>
+        <nav><a href="#" id="logout">Logout</a></nav>
+    </header>
+    <main class="card">
+        <h2>Welcome</h2>
+        <div id="content">Loading meetings…</div>
+    </main>
+
+    <script src="/js/app.js"></script>
+    <script>
+    // protect page
+    requireAuth();
+
+    document.getElementById("logout").addEventListener("click", (e) => {
+      e.preventDefault();
+      logout();
+    });
+
+    // example authorized call (adjust endpoint as needed)
+    (async () => {
+      try {
+        const res = await apiFetch("/api/meeting"); // e.g., GET /api/meeting
+        const json = await res.json();
+        document.getElementById("content").textContent = JSON.stringify(json, null, 2);
+      } catch (err) {
+        document.getElementById("content").textContent = "Failed to load data: " + err.message;
+      }
+    })();
+    </script>
+</body>
+</html>
