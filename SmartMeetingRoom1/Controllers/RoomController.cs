@@ -46,4 +46,12 @@ public class RoomsController : ControllerBase
         if (!ok) return NotFound();
         return NoContent();
     }
+
+    [HttpGet] // GET /api/rooms
+    public async Task<ActionResult<IEnumerable<RoomDto>>> List()
+    {
+        var rooms = await _service.GetAllAsync(); // implement in IRoom service
+        return Ok(rooms);
+    }
+
 }

@@ -8,7 +8,6 @@ using SmartMeetingRoom1.Models;
 using SmartMeetingRoom1.Services;
 using SmartMeetingRoom1.Interfaces;
 using System.Text;
-using Microsoft.AspNetCore.Authorization;
 
 namespace SmartMeetingRoom1
 {
@@ -22,12 +21,21 @@ namespace SmartMeetingRoom1
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // ------------- Identity -------------
+            // ------------- Identity (DEV-friendly) -------------
             builder.Services.AddIdentityCore<ApplicationUser>(o =>
             {
+                // password policy (relaxed for dev)
                 o.Password.RequiredLength = 6;
                 o.Password.RequireNonAlphanumeric = false;
                 o.Password.RequireUppercase = false;
+
+                // prevent "NotAllowed" on login
+                o.SignIn.RequireConfirmedAccount = false;
+                o.SignIn.RequireConfirmedEmail = false;
+                o.SignIn.RequireConfirmedPhoneNumber = false;
+
+                // avoid accidental lockouts in dev
+                o.Lockout.AllowedForNewUsers = false;
             })
             .AddRoles<IdentityRole<int>>()
             .AddEntityFrameworkStores<AppDbContext>()
@@ -41,7 +49,7 @@ namespace SmartMeetingRoom1
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.RequireHttpsMetadata = false;
+                    options.RequireHttpsMetadata = builder.Environment.IsProduction();
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -71,7 +79,7 @@ namespace SmartMeetingRoom1
             // -------- Controllers (secured by default) -------
             builder.Services.AddControllers(o =>
             {
-                o.Filters.Add(new AuthorizeFilter());
+                o.Filters.Add(new AuthorizeFilter()); // [AllowAnonymous] on Auth endpoints will bypass
             });
 
             // --------------- Swagger -------------
@@ -97,7 +105,7 @@ namespace SmartMeetingRoom1
 
             var app = builder.Build();
 
-            // ---------- DB migrate + seed roles ----------
+            // ---------- DB migrate + ensure roles ----------
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -112,14 +120,13 @@ namespace SmartMeetingRoom1
             app.UseHttpsRedirection();
 
             // ======= Serve your front-end from wwwroot =======
-            // Looks for index.html (and then login.html if you prefer) at the site root.
-            app.UseDefaultFiles();   // uses wwwroot by default
-            app.UseStaticFiles();    // serve /login.html, /register.html, /css/*, /js/*
+            app.UseDefaultFiles();   // serves index.html if present
+            app.UseStaticFiles();    // serves /login.html, /assets/*, /js/*
 
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // Swagger at /docs to avoid clashing with your site root
+            // Swagger at /docs
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
@@ -134,3 +141,4 @@ namespace SmartMeetingRoom1
         }
     }
 }
+ 

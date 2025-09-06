@@ -7,6 +7,7 @@ using SmartMeetingRoom1.Models;
 using SmartMeetingRoom1.Services;
 using System.Security.Claims;
 using SmartMeetingRoom1.Interfaces;
+
 namespace SmartMeetingRoom1.Controllers
 {
     [ApiController]
@@ -47,8 +48,6 @@ namespace SmartMeetingRoom1.Controllers
             {
                 UserName = userName,
                 Email = dto.Email,
-                // If your ApplicationUser has FullName and your DTO includes it:
-                // FullName = dto.FullName
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);
@@ -59,9 +58,8 @@ namespace SmartMeetingRoom1.Controllers
             if (!await _db.Roles.AnyAsync(r => r.Name == role)) role = "User";
             await _userManager.AddToRoleAsync(user, role);
 
-            return StatusCode(201); // Created (no body is fine for your current front-end)
+            return StatusCode(201);
         }
-
 
         [AllowAnonymous]
         [HttpPost("login")]
@@ -74,9 +72,19 @@ namespace SmartMeetingRoom1.Controllers
             if (user == null) return Unauthorized("Invalid credentials.");
 
             var signIn = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
-            if (!signIn.Succeeded) return Unauthorized("Invalid credentials.");
 
-            var (access, refresh) = await _tokenService.CreateTokensAsync(user, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            // 🔎 detailed failure reasons (added)
+            if (!signIn.Succeeded)
+            {
+                if (signIn.IsLockedOut) return Unauthorized("Locked out.");
+                if (signIn.IsNotAllowed) return Unauthorized("Not allowed (confirm email/phone?).");
+                if (signIn.RequiresTwoFactor) return Unauthorized("Two-factor required.");
+                return Unauthorized("Invalid credentials.");
+            }
+
+            var (access, refresh) = await _tokenService.CreateTokensAsync(
+                user, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
             var expiresIn = int.Parse(_config["Jwt:AccessTokenMinutes"] ?? "15") * 60;
 
             return Ok(new TokenResponseDto
@@ -100,10 +108,10 @@ namespace SmartMeetingRoom1.Controllers
             var user = await _userManager.FindByIdAsync(idStr);
             if (user == null) return Unauthorized();
 
-            var token = await _db.RefreshTokens.FirstOrDefaultAsync(x => x.UserId == user.Id && x.Token == dto.RefreshToken);
+            var token = await _db.RefreshTokens
+                .FirstOrDefaultAsync(x => x.UserId == user.Id && x.Token == dto.RefreshToken);
             if (token == null || !token.IsActive) return Unauthorized("Invalid refresh token.");
 
-            
             token.RevokedAt = DateTime.UtcNow;
             token.RevokedByIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -126,7 +134,8 @@ namespace SmartMeetingRoom1.Controllers
         public async Task<IActionResult> Revoke([FromBody] string refreshToken)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var token = await _db.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken && x.UserId == userId);
+            var token = await _db.RefreshTokens
+                .FirstOrDefaultAsync(x => x.Token == refreshToken && x.UserId == userId);
             if (token == null || !token.IsActive) return NotFound();
 
             token.RevokedAt = DateTime.UtcNow;

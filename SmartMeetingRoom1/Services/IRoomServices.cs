@@ -72,5 +72,23 @@ namespace SmartMeetingRoom1.Services
             return true;
         }
 
+        public async Task<List<RoomDto>> GetAllAsync()
+        {
+            return await _db.Rooms
+                .AsNoTracking()
+                .Select(r => new RoomDto
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Capacity = r.Capacity,
+                    // you removed Status in the UI, so don’t send it
+                    Features = r.Features,   // comma-separated or array, just match your DTO
+                    Location = r.Location,
+                    CreatedAt = r.CreatedAt
+                })
+                .ToListAsync();
+        }
+
+
     }
 }
