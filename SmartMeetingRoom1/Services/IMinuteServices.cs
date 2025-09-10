@@ -21,7 +21,7 @@ namespace SmartMeetingRoom1.Services
             CreatorId = m.CreatorId,
             Discussion = m.Discussion,
             Decisions = m.Decisions,
-            CreatedAt = m.CreatedAt
+            CreatedUtc = m.CreatedUtc
         };
 
         public async Task<MinuteDto?> GetByIdAsync(int id)
@@ -29,6 +29,14 @@ namespace SmartMeetingRoom1.Services
             var minute = await _db.Minutes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Id == id);
+
+            return minute == null ? null : MapToDto(minute);
+        }
+        public async Task<MinuteDto?> GetByMeetingAsync(int meetingId)
+        {
+            var minute = await _db.Minutes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.MeetingId == meetingId);
 
             return minute == null ? null : MapToDto(minute);
         }
@@ -47,7 +55,7 @@ namespace SmartMeetingRoom1.Services
                 CreatorId = dto.CreatorId,
                 Discussion = dto.Discussion,
                 Decisions = dto.Decisions,
-                CreatedAt = DateTime.UtcNow
+                CreatedUtc = DateTime.UtcNow
             };
 
             _db.Minutes.Add(minute);

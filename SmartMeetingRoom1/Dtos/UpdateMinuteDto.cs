@@ -2,7 +2,8 @@
 {
     public class UpdateMinuteDto
     {
-        public string Discussion { get; set; }
-        public string Decisions { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public string Discussion { get; set; } = string.Empty;
+        public string Decisions { get; set; } = string.Empty;
     }
 }

@@ -1,0 +1,556 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Active Meeting – SmartMeet</title>
+
+    <!-- Vendor -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+
+    <!-- Your theme (served from wwwroot) -->
+    <link href="/css/style.css" rel="stylesheet" />
+    <link href="/css/custom.css" rel="stylesheet" />
+</head>
+<body>
+    <!-- Header -->
+    <header id="header" class="header fixed-top d-flex align-items-center">
+        <div class="d-flex align-items-center justify-content-between">
+            <a href="index.html" class="logo d-flex align-items-center">
+                <i class="bi bi-calendar-event"></i>
+                <span class="d-none d-lg-block">SmartMeet</span>
+            </a>
+            <i class="bi bi-list toggle-sidebar-btn"></i>
+        </div>
+
+        <nav class="header-nav ms-auto">
+            <ul class="d-flex align-items-center">
+                <li class="nav-item dropdown pe-3">
+                    <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
+                        <img src="/assets/img/profile-img.jpg" class="rounded-circle" alt="Profile" />
+                        <span class="d-none d-md-block dropdown-toggle ps-2" id="navUserName">Profile</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" id="btnSignOut"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <ul class="sidebar-nav" id="sidebar-nav">
+            <li class="nav-item"><a class="nav-link collapsed" href="index.html"><i class="bi bi-grid"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="review.html"><i class="bi bi-search"></i><span>Review</span></a></li>
+        </ul>
+    </aside>
+
+    <!-- Main -->
+    <main id="main" class="main">
+        <div class="pagetitle">
+            <h1>Active Meeting</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                    <li class="breadcrumb-item active">Active Meeting</li>
+                </ol>
+            </nav>
+        </div>
+        <!-- Find a meeting -->
+        <div class="card mb-3" id="findCard">
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="searchDate">Date</label>
+                        <input type="date" class="form-control" id="searchDate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="meetingSearch">Search (title)</label>
+                        <input type="text" class="form-control" id="meetingSearch" placeholder="Type to search…">
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="searchMine" checked>
+                            <label class="form-check-label" for="searchMine">Only my meetings</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 7rem;">Time</th>
+                                <th>Title</th>
+                                <th style="width: 10rem;">Room</th>
+                                <th style="width: 8rem;">Status</th>
+                                <th style="width: 6rem;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchResults">
+                            <tr><td colspan="5" class="text-muted">Pick a date or start typing…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="searchError" class="text-danger small mt-2"></div>
+            </div>
+        </div>
+
+
+        <section class="section">
+            <div class="row">
+                <!-- Meeting header -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h5 class="card-title mb-1" id="title">Loading…</h5>
+                                    <p class="text-muted mb-0" id="timeRange"></p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <span class="badge bg-secondary fs-6" id="status">—</span>
+                                    <div class="mt-2">
+                                        <span class="fs-4 fw-bold text-primary" id="timer">00:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="headError" class="text-danger small mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Meeting Controls</h5>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <button class="btn btn-success w-100" id="btnStart">
+                                        <i class="bi bi-play-circle me-2"></i>Start Meeting
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-danger w-100" id="btnEnd">
+                                        <i class="bi bi-stop-circle me-2"></i>End Meeting
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-primary w-100" id="btnStartTimer">
+                                        <i class="bi bi-stopwatch me-2"></i>Start Timer
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-warning w-100" id="btnStopTimer">
+                                        <i class="bi bi-pause-circle me-2"></i>Stop Timer
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="chkTranscript">
+                                    <label class="form-check-label" for="chkTranscript">
+                                        <i class="bi bi-mic me-2"></i>Live Transcription
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <h6>Quick Actions</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a class="btn btn-outline-primary" id="btnMinutes"><i class="bi bi-journal-text me-1"></i>Minutes</a>
+                                    <button class="btn btn-outline-secondary" id="btnShare"><i class="bi bi-display me-1"></i>Share Screen</button>
+                                    <button class="btn btn-outline-info" id="btnInvite" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                                        <i class="bi bi-person-plus me-1"></i>Invite
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="ctrlError" class="text-danger small mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendees -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Attendees</h5>
+                            <div id="attendeesList" class="list-group list-group-flush">
+                                <div class="list-group-item text-muted">Loading…</div>
+                            </div>
+                            <div id="attError" class="text-danger small mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Invite modal -->
+    <div class="modal fade" id="inviteModal" tabindex="-1" aria-hidden="true" aria-labelledby="inviteLabel">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inviteLabel">Invite Participants</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label for="inviteEmail" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="inviteEmail" placeholder="user@example.com" />
+                        <div class="form-text">Press Enter to add multiple emails.</div>
+                    </div>
+                    <div id="inviteChips" class="d-flex flex-wrap gap-2 mb-2"></div>
+                    <div id="inviteError" class="text-danger small"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" id="btnSendInvite"><i class="bi bi-send me-1"></i>Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer id="footer" class="footer">
+        <div class="copyright">© <strong><span>SmartMeet</span></strong>. All Rights Reserved</div>
+    </footer>
+
+    <!-- Vendor -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/custom.js"></script>
+
+    <script>
+        // ====== helpers ======
+        function getToken() {
+            return localStorage.getItem('smr_access_token') || sessionStorage.getItem('smr_access_token') || '';
+        }
+        async function authedFetch(url, options = {}) {
+            const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+            const t = getToken();
+            if (t) headers['Authorization'] = 'Bearer ' + t;
+            return fetch(url, { ...options, headers });
+        }
+        function q(name) {
+            const u = new URL(window.location.href);
+            return u.searchParams.get(name);
+        }
+        function fmtRange(s, e) {
+            const a = new Date(s), b = new Date(e);
+            return a.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+                ' – ' +
+                b.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        function setBadge(el, status) {
+            const map = { Scheduled: 'bg-secondary', Started: 'bg-success', InProgress: 'bg-success', Ended: 'bg-dark', Cancelled: 'bg-danger' };
+            el.className = 'badge fs-6 ' + (map[status] || 'bg-secondary');
+            el.textContent = status;
+        }
+
+        // ====== state ======
+        const meetingId = q('id') || sessionStorage.getItem('smr_active_meeting_id') || '';
+        let meeting = null;
+        let timerHandle = null;
+
+        // ====== UI refs ======
+        const $title = document.getElementById('title');
+        const $timeRange = document.getElementById('timeRange');
+        const $status = document.getElementById('status');
+        const $timer = document.getElementById('timer');
+        const $att = document.getElementById('attendeesList');
+        const $headErr = document.getElementById('headError');
+        const $ctrlErr = document.getElementById('ctrlError');
+        const $attErr = document.getElementById('attError');
+
+        // sign out
+        document.getElementById('btnSignOut')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('smr_access_token');
+            sessionStorage.removeItem('smr_access_token');
+            window.location.href = '/login.html';
+        });
+
+        // ====== load meeting ======
+        async function loadMeeting() {
+            if (!meetingId) {
+                $title.textContent = 'No meeting selected';
+                $timeRange.textContent = 'Open from a meeting link or add ?id=MEETING_ID to the URL.';
+                return;
+            }
+            sessionStorage.setItem('smr_active_meeting_id', meetingId);
+
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}`);
+                if (!r.ok) throw new Error(await r.text());
+                meeting = await r.json();
+
+                $title.textContent = meeting.title || 'Meeting';
+                $timeRange.textContent = fmtRange(meeting.startTime, meeting.endTime);
+                setBadge($status, meeting.status || 'Scheduled');
+
+                // Timer: show remaining to EndTime (countdown), but allow manual start/stop
+                startUiTimer();
+            } catch (err) {
+                console.error(err);
+                $headErr.textContent = 'Failed to load meeting.';
+            }
+        }
+
+        // ====== attendees ======
+        async function loadAttendees() {
+            if (!meetingId) return;
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}/attendees`);
+                if (!r.ok) throw new Error(await r.text());
+                const rows = await r.json(); // expect [{ userId, name, isHost }]
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $att.innerHTML = '<div class="list-group-item text-muted">No attendees.</div>';
+                    return;
+                }
+                $att.innerHTML = rows.map(a => `
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <span class="bg-success rounded-circle me-2" style="width:8px;height:8px;"></span>
+              <span>${a.name || ('User ' + a.userId)}</span>
+            </div>
+            ${a.isHost ? '<small class="text-muted">Host</small>' : ''}
+          </div>
+        `).join('');
+            } catch (err) {
+                console.error(err);
+                $attErr.textContent = 'Failed to load attendees.';
+            }
+        }
+
+        // ====== controls ======
+        async function startMeeting() {
+            if (!meetingId) return;
+            $ctrlErr.textContent = '';
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}/start`, { method: 'POST' });
+                if (!r.ok && r.status !== 204) throw new Error(await r.text());
+                setBadge($status, 'Started');
+                startUiTimer(true);
+            } catch (err) {
+                console.error(err);
+                $ctrlErr.textContent = 'Failed to start meeting.';
+            }
+        }
+        async function endMeeting() {
+            if (!meetingId) return;
+            $ctrlErr.textContent = '';
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}/end`, { method: 'POST' });
+                if (!r.ok && r.status !== 204) throw new Error(await r.text());
+                setBadge($status, 'Ended');
+                stopUiTimer();
+            } catch (err) {
+                console.error(err);
+                $ctrlErr.textContent = 'Failed to end meeting.';
+            }
+        }
+
+        // transcription toggle (best-effort)
+        async function toggleTranscript(enabled) {
+            if (!meetingId) return;
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}/transcription`, {
+                    method: 'POST',
+                    body: JSON.stringify({ enabled })
+                });
+                if (!r.ok && r.status !== 204) throw new Error(await r.text());
+            } catch (err) {
+                console.warn('Transcription toggle failed (endpoint optional):', err);
+            }
+        }
+
+        // ====== UI timer ======
+        function startUiTimer(fromNow = false) {
+            stopUiTimer();
+
+            if (fromNow) {
+                // Manual speaker timer: COUNT UP from now
+                const t0 = Date.now();
+                timerHandle = setInterval(() => {
+                    const secs = Math.max(0, Math.floor((Date.now() - t0) / 1000));
+                    const m = Math.floor(secs / 60);
+                    const s = secs % 60;
+                    $timer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                }, 1000);
+                return;
+            }
+
+            // Scheduled header timer: COUNT DOWN to EndTime
+            if (!meeting) return;
+            const end = new Date(meeting.endTime).getTime();
+            timerHandle = setInterval(() => {
+                const secs = Math.max(0, Math.floor((end - Date.now()) / 1000));
+                const m = Math.floor(secs / 60);
+                const s = secs % 60;
+                $timer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                if (secs === 0) stopUiTimer();
+            }, 1000);
+        }
+
+        function stopUiTimer() {
+            if (timerHandle) clearInterval(timerHandle);
+            timerHandle = null;
+        }
+
+        // ====== invite chips & send ======
+        (function wireInviteChips() {
+            const input = document.getElementById('inviteEmail');
+            const chips = document.getElementById('inviteChips');
+            input?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const v = input.value.trim();
+                    if (!v) return;
+                    const span = document.createElement('span');
+                    span.className = 'badge bg-primary';
+                    span.innerHTML = `${v} <button class="btn btn-sm btn-close btn-close-white ms-1" aria-label="Remove"></button>`;
+                    span.querySelector('button').addEventListener('click', () => span.remove());
+                    chips.appendChild(span);
+                    input.value = '';
+                }
+            });
+            document.getElementById('btnSendInvite')?.addEventListener('click', async () => {
+                const emails = Array.from(chips.querySelectorAll('.badge')).map(b => b.firstChild.textContent.trim());
+                document.getElementById('inviteError').textContent = '';
+                if (emails.length === 0) {
+                    document.getElementById('inviteError').textContent = 'Add at least one email.';
+                    return;
+                }
+                try {
+                    const r = await authedFetch(`/api/meetings/${meetingId}/invite`, {
+                        method: 'POST',
+                        body: JSON.stringify({ emails })
+                    });
+                    if (!r.ok && r.status !== 204) throw new Error(await r.text());
+                    document.getElementById('inviteError').classList.remove('text-danger');
+                    document.getElementById('inviteError').classList.add('text-success');
+                    document.getElementById('inviteError').textContent = 'Invites sent.';
+                } catch (err) {
+                    document.getElementById('inviteError').textContent = 'Failed to send invites.';
+                }
+            });
+        })();
+
+        // ====== wire buttons ======
+        document.getElementById('btnStart')?.addEventListener('click', startMeeting);
+        document.getElementById('btnEnd')?.addEventListener('click', endMeeting);
+        document.getElementById('btnStartTimer')?.addEventListener('click', () => startUiTimer(true));
+        document.getElementById('btnStopTimer')?.addEventListener('click', stopUiTimer);
+        document.getElementById('chkTranscript')?.addEventListener('change', (e) => toggleTranscript(e.target.checked));
+        document.getElementById('btnMinutes')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!meetingId) return;
+            window.location.href = `minutes.html?meetingId=${encodeURIComponent(meetingId)}`;
+        });
+        document.getElementById('btnShare')?.addEventListener('click', () => {
+            alert('Screen sharing hook goes here (Teams/Zoom SDK or WebRTC).');
+        });
+
+        // ====== init ======
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadMeeting();
+            await loadAttendees();
+        });
+
+
+        // ======================================================================
+        // ===============  EXTRA: Finder / Search panel logic  =================
+        // (Works only if the page contains these elements)
+        //   #findCard, #searchDate, #meetingSearch, #searchMine,
+        //   #searchResults (tbody), #searchError
+        // ======================================================================
+
+        // utilities for finder
+        function ymd(d) {
+            const t = new Date(d);
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        }
+        function fmtHM(iso) {
+            return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        function debounce(fn, ms = 250) {
+            let h; return (...args) => { clearTimeout(h); h = setTimeout(() => fn(...args), ms); };
+        }
+
+        // element refs
+        const $findCard = document.getElementById('findCard');
+        const $searchDate = document.getElementById('searchDate');
+        const $searchText = document.getElementById('meetingSearch');
+        const $searchMine = document.getElementById('searchMine');
+        const $searchResults = document.getElementById('searchResults');
+        const $searchError = document.getElementById('searchError');
+
+        // default date = today
+        if ($searchDate) $searchDate.value = ymd(new Date());
+
+        async function runSearch() {
+            if (!$findCard) return; // finder not on this page
+            $searchError.textContent = '';
+
+            const date = $searchDate?.value || ymd(new Date());
+            const q = ($searchText?.value || '').trim();
+            const mine = $searchMine?.checked ? 'true' : 'false';
+
+            const qs = new URLSearchParams({ date, mine });
+            if (q) qs.set('q', q);
+
+            try {
+                if ($searchResults) $searchResults.innerHTML =
+                    `<tr><td colspan="5" class="text-muted">Searching…</td></tr>`;
+
+                const res = await authedFetch(`/api/meetings/search?${qs.toString()}`);
+                if (!res.ok) throw new Error(await res.text());
+                const rows = await res.json();
+
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    if ($searchResults) $searchResults.innerHTML =
+                        `<tr><td colspan="5" class="text-muted">No meetings found.</td></tr>`;
+                    return;
+                }
+
+                if ($searchResults) $searchResults.innerHTML = rows.map(r => `
+          <tr>
+            <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
+            <td>
+              <div class="fw-semibold">${r.title || 'Untitled'}</div>
+              <small class="text-muted">Organizer: ${r.organizer}</small>
+            </td>
+            <td>${r.room}</td>
+            <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'
+                    }">${r.status || ''}</span></td>
+            <td><a class="btn btn-sm btn-primary" href="active-meeting.html?id=${encodeURIComponent(r.id)}">Open</a></td>
+          </tr>
+        `).join('');
+            } catch (err) {
+                console.error(err);
+                if ($searchError) $searchError.textContent = 'Search failed.';
+            }
+        }
+
+        const debouncedSearch = debounce(runSearch, 300);
+        $searchDate?.addEventListener('change', runSearch);
+        $searchMine?.addEventListener('change', runSearch);
+        $searchText?.addEventListener('input', debouncedSearch);
+
+        // if there's no meeting id, automatically populate finder
+        document.addEventListener('DOMContentLoaded', () => {
+            if ($findCard && !meetingId) runSearch();
+        });
+    </script>
+
+</body>
+</html>

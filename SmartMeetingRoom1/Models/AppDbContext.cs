@@ -1,88 +1,88 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using SmartMeetingRoom1.Models;
 
-namespace SmartMeetingRoom1.Models
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
 {
-    
-    public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    // Domain tables – rename the domain User set:
+    public DbSet<User> DomainUsers { get; set; }
+    public DbSet<Meeting> Meetings { get; set; } = default!;
+    public DbSet<Minute> Minutes { get; set; } = default!;
+    public DbSet<MeetingAttendee> MeetingAttendees { get; set; } = default!;
+    public DbSet<Attachment> Attachments { get; set; } = default!;
+    public DbSet<Room> Rooms { get; set; } = default!;
+    public DbSet<Notification> Notifications { get; set; } = default!;
+    public DbSet<ActionItem> ActionItems { get; set; } = default!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = default!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        base.OnModelCreating(modelBuilder);
 
-        
-        public DbSet<User> Users { get; set; }         
-        public DbSet<Meeting> Meetings { get; set; }
-        public DbSet<Minute> Minutes { get; set; }
-        public DbSet<MeetingAttendee> MeetingAttendees { get; set; }
-        public DbSet<Attachment> Attachments { get; set; }
-        public DbSet<Room> Rooms { get; set; }
-        public DbSet<Notification> Notifications { get; set; }
-        public DbSet<ActionItem> ActionItems { get; set; }
+        // Minute -> Creator (Identity user), no back-collection
+        modelBuilder.Entity<Minute>()
+            .HasOne(m => m.Creator)
+            .WithMany()
+            .HasForeignKey(m => m.CreatorId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        // Meeting -> Organizer (Identity user), no back-collection
+        modelBuilder.Entity<Meeting>()
+            .HasOne(m => m.Organizer)
+            .WithMany()
+            .HasForeignKey(m => m.OrganizerId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            
-            base.OnModelCreating(modelBuilder);
+        // Meeting -> Room
+        modelBuilder.Entity<Meeting>()
+            .HasOne(m => m.Room)
+            .WithMany(r => r.Meetings)
+            .HasForeignKey(m => m.RoomId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-            
-            modelBuilder.Entity<Minute>()
-                .HasOne(m => m.Creator)
-                .WithMany(u => u.MinutesCreated)
-                .HasForeignKey(m => m.CreatorId)
-                .OnDelete(DeleteBehavior.Restrict);
+        // MeetingAttendee composite key
+        modelBuilder.Entity<MeetingAttendee>()
+            .HasKey(ma => new { ma.MeetingId, ma.UserId });
 
-            modelBuilder.Entity<Meeting>()
-                .HasOne(m => m.Organizer)
-                .WithMany(u => u.OrganizedMeetings)
-                .HasForeignKey(m => m.OrganizerId)
-                .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<MeetingAttendee>()
+            .HasOne(ma => ma.Meeting)
+            .WithMany(m => m.Attendees)
+            .HasForeignKey(ma => ma.MeetingId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Meeting>()
-                .HasOne(m => m.Room)
-                .WithMany(r => r.Meetings)
-                .HasForeignKey(m => m.RoomId)
-                .OnDelete(DeleteBehavior.Restrict);
+        // Attendee -> domain User with back-collection
+        modelBuilder.Entity<MeetingAttendee>()
+            .HasOne(ma => ma.User)
+            .WithMany(u => u.MeetingAttendees)
+            .HasForeignKey(ma => ma.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<MeetingAttendee>()
-                .HasKey(ma => new { ma.MeetingId, ma.UserId });
+        // Attachment -> Meeting
+        modelBuilder.Entity<Attachment>()
+            .HasOne(a => a.Meeting)
+            .WithMany(m => m.Attachments)
+            .HasForeignKey(a => a.MeetingId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<MeetingAttendee>()
-                .HasOne(ma => ma.Meeting)
-                .WithMany(m => m.Attendees)
-                .HasForeignKey(ma => ma.MeetingId)
-                .OnDelete(DeleteBehavior.Cascade);
+        // ActionItem -> Minute
+        modelBuilder.Entity<ActionItem>()
+            .HasOne(ai => ai.Minute)
+            .WithMany(m => m.ActionItems)
+            .HasForeignKey(ai => ai.MinutesId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<MeetingAttendee>()
-                .HasOne(ma => ma.User)
-                .WithMany(u => u.MeetingAttendees)
-                .HasForeignKey(ma => ma.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+        // ActionItem -> Assignee (domain User)
+        modelBuilder.Entity<ActionItem>()
+            .HasOne(ai => ai.Assignee)
+            .WithMany(u => u.AssignedActionItems)
+            .HasForeignKey(ai => ai.AssignedTo)
+            .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Attachment>()
-                .HasOne(a => a.Meeting)
-                .WithMany(m => m.Attachments)
-                .HasForeignKey(a => a.MeetingId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<ActionItem>()
-                .HasOne(ai => ai.Minute)
-                .WithMany(m => m.ActionItems)
-                .HasForeignKey(ai => ai.MinutesId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<ActionItem>()
-                .HasOne(ai => ai.Assignee)
-                .WithMany(u => u.AssignedActionItems)
-                .HasForeignKey(ai => ai.AssignedTo)
-                .OnDelete(DeleteBehavior.Restrict);
-
-          
-            modelBuilder.Entity<RefreshToken>()
-                .HasIndex(x => x.Token)
-                .IsUnique();
-        }
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(x => x.Token)
+            .IsUnique();
     }
 }

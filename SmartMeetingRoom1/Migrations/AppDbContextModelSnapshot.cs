@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using SmartMeetingRoom1.Models;
 
 #nullable disable
 
@@ -21,6 +20,106 @@ namespace SmartMeetingRoom1.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("ActionItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedTo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MinutesId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedTo");
+
+                    b.HasIndex("MinutesId");
+
+                    b.ToTable("ActionItems");
+                });
+
+            modelBuilder.Entity("Meeting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Agenda")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OrganizerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizerId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("Meetings");
+                });
+
+            modelBuilder.Entity("MeetingAttendee", b =>
+                {
+                    b.Property<int>("MeetingId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("MeetingId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MeetingAttendees");
+                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
                 {
@@ -155,7 +254,7 @@ namespace SmartMeetingRoom1.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.ActionItem", b =>
+            modelBuilder.Entity("Minute", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -163,20 +262,24 @@ namespace SmartMeetingRoom1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AssignedTo")
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatorId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("Decisions")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("DueDate")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Discussion")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("MinutesId")
+                    b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Status")
+                    b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -185,13 +288,13 @@ namespace SmartMeetingRoom1.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignedTo");
+                    b.HasIndex("CreatorId");
 
-                    b.HasIndex("MinutesId");
+                    b.HasIndex("MeetingId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ActionItems");
+                    b.ToTable("Minutes");
                 });
 
             modelBuilder.Entity("SmartMeetingRoom1.Models.ApplicationUser", b =>
@@ -304,111 +407,6 @@ namespace SmartMeetingRoom1.Migrations
                     b.ToTable("Attachments");
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.Meeting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Agenda")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("OrganizerId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizerId");
-
-                    b.HasIndex("RoomId");
-
-                    b.ToTable("Meetings");
-                });
-
-            modelBuilder.Entity("SmartMeetingRoom1.Models.MeetingAttendee", b =>
-                {
-                    b.Property<int>("MeetingId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("MeetingId", "UserId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("MeetingAttendees");
-                });
-
-            modelBuilder.Entity("SmartMeetingRoom1.Models.Minute", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Decisions")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Discussion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("MeetingId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatorId");
-
-                    b.HasIndex("MeetingId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Minutes");
-                });
-
             modelBuilder.Entity("SmartMeetingRoom1.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -518,7 +516,7 @@ namespace SmartMeetingRoom1.Migrations
                     b.ToTable("Rooms");
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -526,7 +524,7 @@ namespace SmartMeetingRoom1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
@@ -551,7 +549,63 @@ namespace SmartMeetingRoom1.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("DomainUsers");
+                });
+
+            modelBuilder.Entity("ActionItem", b =>
+                {
+                    b.HasOne("User", "Assignee")
+                        .WithMany("AssignedActionItems")
+                        .HasForeignKey("AssignedTo")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Minute", "Minute")
+                        .WithMany("ActionItems")
+                        .HasForeignKey("MinutesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignee");
+
+                    b.Navigation("Minute");
+                });
+
+            modelBuilder.Entity("Meeting", b =>
+                {
+                    b.HasOne("SmartMeetingRoom1.Models.ApplicationUser", "Organizer")
+                        .WithMany()
+                        .HasForeignKey("OrganizerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartMeetingRoom1.Models.Room", "Room")
+                        .WithMany("Meetings")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organizer");
+
+                    b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("MeetingAttendee", b =>
+                {
+                    b.HasOne("Meeting", "Meeting")
+                        .WithMany("Attendees")
+                        .HasForeignKey("MeetingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("User", "User")
+                        .WithMany("MeetingAttendees")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Meeting");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -605,41 +659,41 @@ namespace SmartMeetingRoom1.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.ActionItem", b =>
+            modelBuilder.Entity("Minute", b =>
                 {
-                    b.HasOne("SmartMeetingRoom1.Models.User", "Assignee")
-                        .WithMany("AssignedActionItems")
-                        .HasForeignKey("AssignedTo")
+                    b.HasOne("SmartMeetingRoom1.Models.ApplicationUser", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SmartMeetingRoom1.Models.Minute", "Minute")
-                        .WithMany("ActionItems")
-                        .HasForeignKey("MinutesId")
+                    b.HasOne("Meeting", "Meeting")
+                        .WithMany()
+                        .HasForeignKey("MeetingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SmartMeetingRoom1.Models.User", null)
-                        .WithMany("AssignedTasks")
+                    b.HasOne("User", null)
+                        .WithMany("CreatedMinutes")
                         .HasForeignKey("UserId");
 
-                    b.Navigation("Assignee");
+                    b.Navigation("Creator");
 
-                    b.Navigation("Minute");
+                    b.Navigation("Meeting");
                 });
 
             modelBuilder.Entity("SmartMeetingRoom1.Models.Attachment", b =>
                 {
-                    b.HasOne("SmartMeetingRoom1.Models.Meeting", "Meeting")
+                    b.HasOne("Meeting", "Meeting")
                         .WithMany("Attachments")
                         .HasForeignKey("MeetingId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("SmartMeetingRoom1.Models.Minute", "Minute")
-                        .WithMany("Attachments")
+                    b.HasOne("Minute", "Minute")
+                        .WithMany()
                         .HasForeignKey("MinuteId");
 
-                    b.HasOne("SmartMeetingRoom1.Models.User", "Uploader")
+                    b.HasOne("User", "Uploader")
                         .WithMany("UploadedFiles")
                         .HasForeignKey("UploaderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -652,70 +706,9 @@ namespace SmartMeetingRoom1.Migrations
                     b.Navigation("Uploader");
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.Meeting", b =>
-                {
-                    b.HasOne("SmartMeetingRoom1.Models.User", "Organizer")
-                        .WithMany("OrganizedMeetings")
-                        .HasForeignKey("OrganizerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartMeetingRoom1.Models.Room", "Room")
-                        .WithMany("Meetings")
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Organizer");
-
-                    b.Navigation("Room");
-                });
-
-            modelBuilder.Entity("SmartMeetingRoom1.Models.MeetingAttendee", b =>
-                {
-                    b.HasOne("SmartMeetingRoom1.Models.Meeting", "Meeting")
-                        .WithMany("Attendees")
-                        .HasForeignKey("MeetingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SmartMeetingRoom1.Models.User", "User")
-                        .WithMany("MeetingAttendees")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Meeting");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SmartMeetingRoom1.Models.Minute", b =>
-                {
-                    b.HasOne("SmartMeetingRoom1.Models.User", "Creator")
-                        .WithMany("MinutesCreated")
-                        .HasForeignKey("CreatorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartMeetingRoom1.Models.Meeting", "Meeting")
-                        .WithMany("Minutes")
-                        .HasForeignKey("MeetingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SmartMeetingRoom1.Models.User", null)
-                        .WithMany("CreatedMinutes")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Creator");
-
-                    b.Navigation("Meeting");
-                });
-
             modelBuilder.Entity("SmartMeetingRoom1.Models.Notification", b =>
                 {
-                    b.HasOne("SmartMeetingRoom1.Models.User", "User")
+                    b.HasOne("User", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -724,20 +717,16 @@ namespace SmartMeetingRoom1.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.Meeting", b =>
+            modelBuilder.Entity("Meeting", b =>
                 {
                     b.Navigation("Attachments");
 
                     b.Navigation("Attendees");
-
-                    b.Navigation("Minutes");
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.Minute", b =>
+            modelBuilder.Entity("Minute", b =>
                 {
                     b.Navigation("ActionItems");
-
-                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("SmartMeetingRoom1.Models.Room", b =>
@@ -745,21 +734,15 @@ namespace SmartMeetingRoom1.Migrations
                     b.Navigation("Meetings");
                 });
 
-            modelBuilder.Entity("SmartMeetingRoom1.Models.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Navigation("AssignedActionItems");
-
-                    b.Navigation("AssignedTasks");
 
                     b.Navigation("CreatedMinutes");
 
                     b.Navigation("MeetingAttendees");
 
-                    b.Navigation("MinutesCreated");
-
                     b.Navigation("Notifications");
-
-                    b.Navigation("OrganizedMeetings");
 
                     b.Navigation("UploadedFiles");
                 });

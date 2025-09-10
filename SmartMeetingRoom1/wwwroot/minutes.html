@@ -1,0 +1,708 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meeting Minutes – SmartMeet</title>
+
+    <!-- Vendor -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+
+    <!-- Your theme (served from wwwroot) -->
+    <link href="/css/style.css" rel="stylesheet" />
+    <link href="/css/custom.css" rel="stylesheet" />
+</head>
+<body>
+    <!-- Header -->
+    <header id="header" class="header fixed-top d-flex align-items-center">
+        <div class="d-flex align-items-center justify-content-between">
+            <a href="index.html" class="logo d-flex align-items-center">
+                <i class="bi bi-calendar-event"></i>
+                <span class="d-none d-lg-block">SmartMeet</span>
+            </a>
+            <i class="bi bi-list toggle-sidebar-btn"></i>
+        </div>
+
+        <nav class="header-nav ms-auto">
+            <ul class="d-flex align-items-center">
+                <li class="nav-item dropdown pe-3">
+                    <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
+                        <img src="/assets/img/profile-img.jpg" class="rounded-circle" alt="Profile" />
+                        <span class="d-none d-md-block dropdown-toggle ps-2" id="navUserName">Profile</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" id="btnSignOut"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <ul class="sidebar-nav" id="sidebar-nav">
+            <li class="nav-item"><a class="nav-link collapsed" href="index.html"><i class="bi bi-grid"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="review.html"><i class="bi bi-search"></i><span>Review</span></a></li>
+        </ul>
+    </aside>
+
+    <!-- Main -->
+    <main id="main" class="main">
+        <div class="pagetitle">
+            <h1>Meeting Minutes</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                    <li class="breadcrumb-item active">Minutes</li>
+                </ol>
+            </nav>
+        </div>
+
+        <!-- MEETING HEADER -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="me-3">
+                        <h5 class="card-title mb-1" id="mtgTitle">Loading…</h5>
+                        <div class="text-muted" id="mtgWhen">—</div>
+                        <div class="text-muted" id="mtgRoom"></div>
+                    </div>
+                    <!-- Status + Find button -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary" id="mtgStatus">—</span>
+                        <button class="btn btn-outline-primary btn-sm" id="btnOpenFinder">
+                            <i class="bi bi-search me-1"></i> Find meeting
+                        </button>
+                    </div>
+                </div>
+                <div id="headError" class="text-danger small mt-2"></div>
+            </div>
+        </div>
+
+        <!-- SUMMARY: ATTENDEES + AGENDA -->
+        <section class="section">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Attendees</h5>
+                            <div id="attendees" class="d-flex flex-wrap gap-2">
+                                <div class="text-muted">Loading…</div>
+                            </div>
+                            <div class="text-danger small mt-2" id="attError"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Agenda</h5>
+                            <ul class="list-group list-group-flush" id="agendaList">
+                                <li class="list-group-item text-muted">Optional feature – not implemented.</li>
+                            </ul>
+                            <div class="text-danger small mt-2" id="agendaError"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTION ITEMS -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Decisions & Action Items</h5>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <input id="aiDesc" class="form-control" type="text" placeholder="Action item description" />
+                                </div>
+                                <div class="col-md-3">
+                                    <input id="aiAssignee" class="form-control" type="text" placeholder="Assignee (user id or email)" />
+                                </div>
+                                <div class="col-md-2">
+                                    <input id="aiDue" class="form-control" type="date" />
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="btnAiAdd" class="btn btn-primary w-100"><i class="bi bi-plus"></i> Add</button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Assignee</th>
+                                            <th>Due</th>
+                                            <th>Status</th>
+                                            <th style="width:120px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="aiBody">
+                                        <tr><td colspan="5" class="text-muted">Optional feature – not implemented.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="aiError" class="text-danger small"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTES & ATTACHMENTS -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Meeting Notes</h5>
+                            <textarea id="notes" rows="12" class="form-control" placeholder="Enter detailed meeting notes here…"></textarea>
+                            <div class="text-danger small mt-2" id="notesError"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Attachments</h5>
+                            <input id="fileInput" type="file" class="form-control mb-3" multiple />
+                            <div id="files" class="list-group list-group-flush">
+                                <div class="list-group-item text-muted">Optional feature – not implemented.</div>
+                            </div>
+                            <div class="text-danger small mt-2" id="attchError"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SAVE -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <small class="text-muted" id="lastSaved">Last saved: —</small>
+                            <div>
+                                <button id="btnSave" class="btn btn-outline-primary me-2"><i class="bi bi-save me-1"></i>Save Draft</button>
+                                <button id="btnFinalize" class="btn btn-success"><i class="bi bi-check-circle me-1"></i>Finalize & Share</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINDER MODAL -->
+        <div class="modal fade" id="findModal" tabindex="-1" aria-hidden="true" aria-labelledby="findLabel">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="findLabel">Select a meeting</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label" for="findDate">Date</label>
+                                <input type="date" class="form-control" id="findDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="findText">Search (title)</label>
+                                <input type="text" class="form-control" id="findText" placeholder="Type to search…">
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="findMine" checked>
+                                    <label class="form-check-label" for="findMine">Only my meetings</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 7rem;">Time</th>
+                                        <th>Title</th>
+                                        <th style="width: 10rem;">Room</th>
+                                        <th style="width: 8rem;">Status</th>
+                                        <th style="width: 6rem;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="findResults">
+                                    <tr><td colspan="5" class="text-muted">Pick a date or start typing…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="findError" class="text-danger small mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toasts -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="okToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="okToastBody">Saved.</div>
+        </div>
+    </div>
+
+    <!-- Vendor -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/custom.js"></script>
+
+    <script>
+        // ===== Helpers =====
+        function getToken() {
+            return localStorage.getItem('smr_access_token') || sessionStorage.getItem('smr_access_token') || '';
+        }
+        async function authedFetch(url, options = {}) {
+            const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+            const t = getToken();
+            if (t) headers['Authorization'] = 'Bearer ' + t;
+            return fetch(url, { ...options, headers });
+        }
+        function q(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
+        function fmtRange(s, e) {
+            const a = new Date(s), b = new Date(e);
+            return a.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' – ' +
+                b.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        function setBadge(el, status) {
+            const map = { Scheduled: 'bg-secondary', Started: 'bg-success', InProgress: 'bg-success', Ended: 'bg-dark', Cancelled: 'bg-danger' };
+            el.className = 'badge ' + (map[status] || 'bg-secondary');
+            el.textContent = status || '—';
+        }
+        function toastOk(msg) {
+            document.getElementById('okToastBody').textContent = msg || 'Saved.';
+            const t = new bootstrap.Toast(document.getElementById('okToast'));
+            t.show();
+        }
+
+        // Finder helpers
+        function ymd(d) { const t = new Date(d); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; }
+        function fmtHM(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+        function debounce(fn, ms = 300) { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; }
+
+        // ===== State =====
+        let meetingId = q('meetingId') ? parseInt(q('meetingId'), 10) : null;
+        let minutesId = q('minutesId') ? parseInt(q('minutesId'), 10) : null;
+        let minutes = null;
+
+        // ===== UI refs =====
+        const $title = document.getElementById('mtgTitle');
+        const $when = document.getElementById('mtgWhen');
+        const $room = document.getElementById('mtgRoom');
+        const $status = document.getElementById('mtgStatus');
+        const $headErr = document.getElementById('headError');
+
+        const $attWrap = document.getElementById('attendees');
+        const $attErr = document.getElementById('attError');
+
+        const $notes = document.getElementById('notes');
+        const $notesErr = document.getElementById('notesError');
+        const $lastSaved = document.getElementById('lastSaved');
+
+        const $aiBody = document.getElementById('aiBody');
+        const $aiErr = document.getElementById('aiError');
+        const $btnAiAdd = document.getElementById('btnAiAdd');
+        const $aiDesc = document.getElementById('aiDesc');
+        const $aiAssignee = document.getElementById('aiAssignee');
+        const $aiDue = document.getElementById('aiDue');
+
+        const $files = document.getElementById('files');
+        const $fileInput = document.getElementById('fileInput');
+        const $attchErr = document.getElementById('attchError');
+
+        // Finder refs
+        const $findModal = document.getElementById('findModal');
+        const $btnOpenFinder = document.getElementById('btnOpenFinder');
+        const $findDate = document.getElementById('findDate');
+        const $findText = document.getElementById('findText');
+        const $findMine = document.getElementById('findMine');
+        const $findResults = document.getElementById('findResults');
+        const $findError = document.getElementById('findError');
+
+        // ===== Auth header sign out =====
+        document.getElementById('btnSignOut')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('smr_access_token');
+            sessionStorage.removeItem('smr_access_token');
+            window.location.href = '/login.html';
+        });
+
+        // ===== Load meeting header =====
+        async function loadMeetingHeader() {
+            if (!meetingId) return;
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}`);
+                if (!r.ok) throw new Error(await r.text());
+                const m = await r.json();
+                $title.textContent = m.title || 'Meeting';
+                $when.textContent = fmtRange(m.startTime, m.endTime);
+                $room.textContent = m.roomName ? `Room: ${m.roomName}` : '';
+                setBadge($status, m.status);
+            } catch (err) {
+                console.error(err);
+                $headErr.textContent = 'Failed to load meeting.';
+            }
+        }
+
+        // ===== Load attendees =====
+        async function loadAttendees() {
+            if (!meetingId) { $attWrap.innerHTML = '<div class="text-muted">No meeting selected.</div>'; return; }
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}/attendees`);
+                if (!r.ok) throw new Error(await r.text());
+                const rows = await r.json();
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $attWrap.innerHTML = '<div class="text-muted">No attendees.</div>';
+                    return;
+                }
+                $attWrap.innerHTML = rows.map(a =>
+                    `<span class="badge ${a.isHost ? 'bg-success' : 'bg-primary'}">${a.name || ('User ' + a.userId)}${a.isHost ? ' (Host)' : ''}</span>`
+                ).join(' ');
+            } catch (err) {
+                console.error(err);
+                $attErr.textContent = 'Failed to load attendees.';
+            }
+        }
+
+        // ===== Minutes: ensure we have a minutes record =====
+        async function ensureMinutes() {
+            // If minutesId is provided, load it and derive meetingId if missing
+            if (minutesId) {
+                const r = await authedFetch(`/api/minutes/${minutesId}`);
+                if (!r.ok) throw new Error('Minutes not found.');
+                minutes = await r.json();
+                if (!meetingId && minutes.meetingId) meetingId = minutes.meetingId;
+                return;
+            }
+
+            // Else if meetingId provided, try a convenience endpoint (if you added it)
+            if (meetingId) {
+                let r = await authedFetch(`/api/minutes/by-meeting/${meetingId}`);
+                if (r.ok) {
+                    minutes = await r.json();
+                    minutesId = minutes.id;
+                    return;
+                }
+
+                // Fallback: create a bare minutes record
+                r = await authedFetch('/api/minutes', {
+                    method: 'POST',
+                    body: JSON.stringify({ meetingId: meetingId, notes: '' })
+                });
+                if (!r.ok) throw new Error(await r.text());
+                minutes = await r.json();
+                minutesId = minutes.id;
+                return;
+            }
+
+            throw new Error('Provide ?minutesId= or ?meetingId=');
+        }
+
+        // ===== Notes save & finalize =====
+        async function saveDraft() {
+            if (!minutesId) return;
+            $notesErr.textContent = '';
+            try {
+                const r = await authedFetch(`/api/minutes/${minutesId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ notes: $notes.value })
+                });
+                if (!r.ok && r.status !== 204) throw new Error(await r.text());
+                $lastSaved.textContent = 'Last saved: just now';
+                toastOk('Minutes saved.');
+            } catch (err) {
+                console.error(err);
+                $notesErr.textContent = 'Failed to save minutes.';
+            }
+        }
+
+        async function finalizeShare() {
+            if (!minutesId) return;
+            try {
+                const r = await authedFetch(`/api/minutes/${minutesId}/finalize`, { method: 'POST' });
+                if (r.ok || r.status === 204) { toastOk('Minutes finalized.'); return; }
+                await saveDraft();
+                toastOk('Finalize endpoint not available; draft saved instead.');
+            } catch (err) {
+                console.error(err);
+                toastOk('Finalize endpoint not available; draft saved instead.');
+            }
+        }
+
+        // ===== Action items (optional) =====
+        async function loadActionItems() {
+            if (!minutesId) return;
+            try {
+                const r = await authedFetch(`/api/minutes/${minutesId}/action-items`);
+                if (!r.ok) { $aiBody.innerHTML = '<tr><td colspan="5" class="text-muted">Optional feature – not implemented.</td></tr>'; return; }
+                const rows = await r.json();
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $aiBody.innerHTML = '<tr><td colspan="5" class="text-muted">No action items.</td></tr>';
+                    return;
+                }
+                $aiBody.innerHTML = rows.map(ai => `
+            <tr data-id="${ai.id}">
+              <td>${ai.description}</td>
+              <td>${ai.assigneeName || ai.assignedTo || ''}</td>
+              <td>${ai.dueDate ? new Date(ai.dueDate).toISOString().slice(0, 10) : ''}</td>
+              <td><span class="badge ${ai.status === 'Done' ? 'bg-success' : 'bg-warning'}">${ai.status || 'Pending'}</span></td>
+              <td>
+                <button class="btn btn-sm btn-outline-success me-1 btn-ai-done">Done</button>
+                <button class="btn btn-sm btn-outline-danger btn-ai-del"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          `).join('');
+            } catch (err) {
+                console.error(err);
+                $aiErr.textContent = 'Failed to load action items.';
+            }
+        }
+
+        async function addActionItem() {
+            if (!minutesId) return;
+            $aiErr.textContent = '';
+            const body = {
+                description: $aiDesc.value.trim(),
+                assignedTo: $aiAssignee.value.trim(),
+                dueDate: $aiDue.value ? new Date($aiDue.value).toISOString() : null
+            };
+            if (!body.description) { $aiErr.textContent = 'Description required.'; return; }
+
+            try {
+                const r = await authedFetch(`/api/minutes/${minutesId}/action-items`, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                if (!r.ok) throw new Error(await r.text());
+                $aiDesc.value = ''; $aiAssignee.value = ''; $aiDue.value = '';
+                await loadActionItems();
+            } catch (err) {
+                console.error(err);
+                $aiErr.textContent = 'Action items API not available.';
+            }
+        }
+
+        document.getElementById('btnAiAdd')?.addEventListener('click', addActionItem);
+        $aiBody.addEventListener('click', async (e) => {
+            const tr = e.target.closest('tr'); if (!tr) return;
+            const id = tr.getAttribute('data-id');
+            if (!id) return;
+
+            if (e.target.classList.contains('btn-ai-done')) {
+                try {
+                    const r = await authedFetch(`/api/action-items/${id}/status`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ status: 'Done' })
+                    });
+                    if (!r.ok) throw new Error(await r.text());
+                    await loadActionItems();
+                } catch {
+                    $aiErr.textContent = 'Mark-done not available.';
+                }
+            }
+
+            if (e.target.classList.contains('btn-ai-del') || e.target.closest('.btn-ai-del')) {
+                try {
+                    const r = await authedFetch(`/api/action-items/${id}`, { method: 'DELETE' });
+                    if (!r.ok) throw new Error(await r.text());
+                    await loadActionItems();
+                } catch {
+                    $aiErr.textContent = 'Delete not available.';
+                }
+            }
+        });
+
+        // ===== Attachments (optional) =====
+        async function loadAttachments() {
+            if (!minutesId) return;
+            try {
+                const r = await authedFetch(`/api/minutes/${minutesId}/attachments`);
+                if (!r.ok) { $files.innerHTML = '<div class="list-group-item text-muted">Optional feature – not implemented.</div>'; return; }
+                const rows = await r.json();
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $files.innerHTML = '<div class="list-group-item text-muted">No attachments.</div>';
+                    return;
+                }
+                $files.innerHTML = rows.map(a => `
+            <div class="list-group-item d-flex justify-content-between align-items-center" data-id="${a.id}">
+              <span><i class="bi bi-paperclip me-2"></i>${a.fileName}</span>
+              <button class="btn btn-sm btn-outline-danger btn-att-del"><i class="bi bi-x"></i></button>
+            </div>
+          `).join('');
+            } catch (err) {
+                console.error(err);
+                $attchErr.textContent = 'Failed to load attachments.';
+            }
+        }
+
+        $fileInput.addEventListener('change', async (e) => {
+            if (!minutesId || !e.target.files?.length) return;
+            try {
+                const form = new FormData();
+                for (const f of e.target.files) form.append('file', f);
+                const t = getToken();
+                const r = await fetch(`/api/minutes/${minutesId}/attachments`, {
+                    method: 'POST',
+                    headers: t ? { 'Authorization': 'Bearer ' + t } : undefined,
+                    body: form
+                });
+                if (!r.ok) throw new Error(await r.text());
+                e.target.value = '';
+                await loadAttachments();
+            } catch (err) {
+                console.error(err);
+                $attchErr.textContent = 'Upload API not available.';
+            }
+        });
+
+        $files.addEventListener('click', async (e) => {
+            const row = e.target.closest('[data-id]'); if (!row) return;
+            const id = row.getAttribute('data-id');
+            if (e.target.classList.contains('btn-att-del') || e.target.closest('.btn-att-del')) {
+                try {
+                    const r = await authedFetch(`/api/attachments/${id}`, { method: 'DELETE' });
+                    if (!r.ok) throw new Error(await r.text());
+                    await loadAttachments();
+                } catch {
+                    $attchErr.textContent = 'Delete API not available.';
+                }
+            }
+        });
+
+        // ===== Wire save/finalize =====
+        document.getElementById('btnSave')?.addEventListener('click', saveDraft);
+        document.getElementById('btnFinalize')?.addEventListener('click', finalizeShare);
+
+        // ===== Finder logic =====
+        if ($findDate) $findDate.value = ymd(new Date());
+
+        $btnOpenFinder?.addEventListener('click', () => {
+            bootstrap.Modal.getOrCreateInstance($findModal).show();
+            runFinder();
+        });
+
+        const debouncedFinder = debounce(runFinder, 300);
+        $findDate?.addEventListener('change', runFinder);
+        $findMine?.addEventListener('change', runFinder);
+        $findText?.addEventListener('input', debouncedFinder);
+
+        async function runFinder() {
+            if (!$findModal) return;
+            $findError.textContent = '';
+            const date = $findDate.value || ymd(new Date());
+            const qTxt = ($findText.value || '').trim();
+            const mine = $findMine.checked ? 'true' : 'false';
+
+            const qs = new URLSearchParams({ date, mine });
+            if (qTxt) qs.set('q', qTxt);
+
+            try {
+                $findResults.innerHTML = '<tr><td colspan="5" class="text-muted">Searching…</td></tr>';
+                const res = await authedFetch(`/api/meetings/search?${qs.toString()}`);
+                if (!res.ok) throw new Error(await res.text());
+                const rows = await res.json();
+
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $findResults.innerHTML = '<tr><td colspan="5" class="text-muted">No meetings found.</td></tr>';
+                    return;
+                }
+
+                $findResults.innerHTML = rows.map(r => `
+            <tr>
+              <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
+              <td>
+                <div class="fw-semibold">${r.title || 'Untitled'}</div>
+                <small class="text-muted">Organizer: ${r.organizer || ''}</small>
+              </td>
+              <td>${r.room || ''}</td>
+              <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${r.status || ''}</span></td>
+              <td><button class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
+            </tr>
+          `).join('');
+            } catch (err) {
+                console.error(err);
+                $findError.textContent = 'Search failed.';
+            }
+        }
+
+        $findResults?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.btn-use-meeting');
+            if (!btn) return;
+            const id = parseInt(btn.getAttribute('data-id'), 10);
+            if (!id) return;
+            await openMeeting(id);
+        });
+
+        async function openMeeting(id) {
+            meetingId = id;
+            minutesId = null;
+            $headErr.textContent = '';
+            try {
+                await ensureMinutes();         // load/create minutes for meetingId
+                // preload notes
+                if (minutes && typeof minutes.notes === 'string') $notes.value = minutes.notes;
+                if (minutes && minutes.lastSavedUtc) {
+                    $lastSaved.textContent = 'Last saved: ' + new Date(minutes.lastSavedUtc).toLocaleString();
+                } else {
+                    $lastSaved.textContent = 'Last saved: —';
+                }
+
+                await loadMeetingHeader();
+                await loadAttendees();
+                await loadActionItems();
+                await loadAttachments();
+
+                bootstrap.Modal.getOrCreateInstance($findModal).hide();
+            } catch (err) {
+                console.error(err);
+                $headErr.textContent = 'Failed to open minutes for the selected meeting.';
+            }
+        }
+
+        // ===== Init =====
+        document.addEventListener('DOMContentLoaded', async () => {
+            const hasQuery = !!q('minutesId') || !!q('meetingId');
+            if (!hasQuery) {
+                // No query → open finder automatically
+                bootstrap.Modal.getOrCreateInstance($findModal).show();
+                runFinder();
+                return;
+            }
+
+            try {
+                await ensureMinutes();
+                if (minutes && typeof minutes.notes === 'string') $notes.value = minutes.notes;
+                if (minutes && minutes.lastSavedUtc) {
+                    $lastSaved.textContent = 'Last saved: ' + new Date(minutes.lastSavedUtc).toLocaleString();
+                }
+
+                await loadMeetingHeader();
+                await loadAttendees();
+                await loadActionItems();
+                await loadAttachments();
+            } catch (err) {
+                console.error(err);
+                $headErr.textContent = 'Open minutes via ?minutesId=ID or ?meetingId=ID.';
+            }
+        });
+    </script>
+</body>
+</html>
