@@ -298,8 +298,15 @@
         function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
         // ===== State =====
-        let meetingId = q('meetingId') ? parseInt(q('meetingId'), 10) : null;
-        let minutesId = q('minutesId') ? parseInt(q('minutesId'), 10) : null;
+        function getId(name) {
+            const v = q(name);
+            if (v == null) return null;
+            const n = parseInt(v, 10);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        }
+        let meetingId = getId('meetingId');
+        let minutesId = getId('minutesId');
+
         let minutes = null;
 
         // ===== UI refs =====
@@ -413,7 +420,7 @@
 
         // ===== Minutes: ensure we have a minutes record =====
         async function ensureMinutes() {
-            if (minutesId) {
+            if (minutesId !== null) {
                 const r = await authedFetch(`/api/minutes/${minutesId}`);
                 if (!r.ok) throw new Error('Minutes not found.');
                 minutes = await r.json();
@@ -421,17 +428,16 @@
                 return;
             }
 
-            if (meetingId) {
+            if (meetingId !== null) {
                 let r = await authedFetch(`/api/minutes/by-meeting/${meetingId}`);
                 if (r.ok) {
                     minutes = await r.json();
                     minutesId = minutes.id;
                     return;
                 }
-
                 r = await authedFetch('/api/minutes', {
                     method: 'POST',
-                    body: JSON.stringify({ meetingId: meetingId, notes: '' })
+                    body: JSON.stringify({ meetingId, notes: '' })
                 });
                 if (!r.ok) throw new Error(await r.text());
                 minutes = await r.json();
@@ -440,6 +446,7 @@
             }
 
             throw new Error('Provide ?minutesId= or ?meetingId=');
+
         }
 
         // ===== Notes save & finalize =====
@@ -660,7 +667,7 @@
                 </td>
                 <td>${escapeHtml(r.room || '')}</td>
                 <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${escapeHtml(r.status || '')}</span></td>
-                <td><button class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
+                <td><button type="button" class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
               </tr>
             `).join('');
             } catch (err) {
@@ -670,12 +677,22 @@
         }
 
         $findResults?.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.btn-use-meeting');
-            if (!btn) return;
-            const id = parseInt(btn.getAttribute('data-id'), 10);
-            if (!id) return;
-            await openMeeting(id);
-        });
+              const btn = e.target.closest('.btn-use-meeting');
+              if (!btn) return;
+              const raw = btn.getAttribute('data-id');
+              const id = Number.parseInt(raw, 10);
+              if (!Number.isFinite(id) || id <= 0) {
+                    console.error('Finder “Use” clicked but data-id is invalid:', raw);
+                    $findError.textContent = 'Can’t open that meeting (invalid id).';
+                    return;
+                  }
+              try {
+                   await openMeeting(id);
+                  } catch (err) {
+                        console.error(err);
+                        $findError.textContent = 'Failed to open that meeting.';
+                      }
+            });
 
         async function openMeeting(id) {
             meetingId = id;
@@ -705,7 +722,7 @@
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', async () => {
-            const hasQuery = !!q('minutesId') || !!q('meetingId');
+            const hasQuery = minutesId !== null || meetingId !== null;
             if (!hasQuery) {
                 bootstrap.Modal.getOrCreateInstance($findModal).show();
                 runFinder();

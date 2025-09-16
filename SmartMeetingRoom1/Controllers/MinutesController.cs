@@ -47,11 +47,10 @@ namespace SmartMeetingRoom1.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             if (dto.MeetingId <= 0) return BadRequest("MeetingId is required.");
 
-            if (dto.CreatorId <= 0)
-            {
-                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (int.TryParse(userIdStr, out var uid)) dto.CreatorId = uid;
-            }
+            // Always take the creator from the JWT
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdStr, out var uid)) return Unauthorized();
+            dto.CreatorId = uid;
 
             var existing = await _service.GetByMeetingAsync(dto.MeetingId);
             if (existing != null)
@@ -60,6 +59,7 @@ namespace SmartMeetingRoom1.Controllers
             var created = await _service.CreateAsync(dto);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
+
 
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Admin,Employee")]

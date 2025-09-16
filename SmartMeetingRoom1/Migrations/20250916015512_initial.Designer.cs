@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace SmartMeetingRoom1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250915222846_SyncSnapshot")]
-    partial class SyncSnapshot
+    [Migration("20250916015512_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,8 +32,8 @@ namespace SmartMeetingRoom1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AssignedTo")
-                        .HasColumnType("int");
+                    b.Property<string>("AssignedTo")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -49,13 +49,16 @@ namespace SmartMeetingRoom1.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("AssignedTo");
+                    b.HasKey("Id");
 
                     b.HasIndex("MinutesId");
 
-                    b.ToTable("ActionItems");
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ActionItems", (string)null);
                 });
 
             modelBuilder.Entity("Meeting", b =>
@@ -406,7 +409,7 @@ namespace SmartMeetingRoom1.Migrations
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("UploadedBy")
+                    b.Property<int?>("UploadedBy")
                         .HasColumnType("int");
 
                     b.Property<int?>("UploaderId")
@@ -570,18 +573,15 @@ namespace SmartMeetingRoom1.Migrations
 
             modelBuilder.Entity("ActionItem", b =>
                 {
-                    b.HasOne("User", "Assignee")
-                        .WithMany("AssignedActionItems")
-                        .HasForeignKey("AssignedTo")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Minute", "Minute")
                         .WithMany("ActionItems")
                         .HasForeignKey("MinutesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Assignee");
+                    b.HasOne("User", null)
+                        .WithMany("AssignedActionItems")
+                        .HasForeignKey("UserId");
 
                     b.Navigation("Minute");
                 });

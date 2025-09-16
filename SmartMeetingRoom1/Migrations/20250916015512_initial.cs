@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SmartMeetingRoom1.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -341,18 +341,18 @@ namespace SmartMeetingRoom1.Migrations
                     MinutesId = table.Column<int>(type: "int", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    AssignedTo = table.Column<int>(type: "int", nullable: true),
-                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    AssignedTo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UserId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ActionItems", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ActionItems_DomainUsers_AssignedTo",
-                        column: x => x.AssignedTo,
+                        name: "FK_ActionItems_DomainUsers_UserId",
+                        column: x => x.UserId,
                         principalTable: "DomainUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ActionItems_Minutes_MinutesId",
                         column: x => x.MinutesId,
@@ -368,12 +368,14 @@ namespace SmartMeetingRoom1.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SizeBytes = table.Column<long>(type: "bigint", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UploadedBy = table.Column<int>(type: "int", nullable: false),
-                    UploaderId = table.Column<int>(type: "int", nullable: false),
+                    UploadedBy = table.Column<int>(type: "int", nullable: true),
+                    UploaderId = table.Column<int>(type: "int", nullable: true),
                     MeetingId = table.Column<int>(type: "int", nullable: true),
-                    MinuteId = table.Column<int>(type: "int", nullable: true)
+                    MinuteId = table.Column<int>(type: "int", nullable: true),
+                    FileContent = table.Column<byte[]>(type: "varbinary(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -382,8 +384,7 @@ namespace SmartMeetingRoom1.Migrations
                         name: "FK_Attachments_DomainUsers_UploaderId",
                         column: x => x.UploaderId,
                         principalTable: "DomainUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Attachments_Meetings_MeetingId",
                         column: x => x.MeetingId,
@@ -398,14 +399,14 @@ namespace SmartMeetingRoom1.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ActionItems_AssignedTo",
-                table: "ActionItems",
-                column: "AssignedTo");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ActionItems_MinutesId",
                 table: "ActionItems",
                 column: "MinutesId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ActionItems_UserId",
+                table: "ActionItems",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
