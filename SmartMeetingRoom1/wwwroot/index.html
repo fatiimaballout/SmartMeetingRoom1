@@ -245,29 +245,51 @@
             try {
                 const res = await authedFetch('/api/meetings/upcoming');
                 if (!res.ok) return;
+
                 const items = await res.json();
                 const tbody = document.getElementById('upcomingBody');
                 tbody.innerHTML = '';
+
                 if (!Array.isArray(items) || !items.length) {
                     tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No upcoming meetings</td></tr>';
                     return;
                 }
+
+                // small helper to avoid breaking HTML with user text
+                const esc = s => (s || '').replace(/[&<>"']/g, c => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+
                 for (const m of items) {
                     const start = m.startTime ? new Date(m.startTime) : null;
                     const timeStr = start ? start.toLocaleString() : '';
+                    const title = esc(m.title ?? '');
+                    const room = esc(m.room?.name ?? m.roomName ?? '');
+
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-              <td>${timeStr}</td>
-              <td>${m.title ?? ''}</td>
-              <td>${m.room?.name ?? ''}</td>
-              <td>
-                <button class="btn btn-sm btn-success me-1" title="Join"><i class="bi bi-camera-video"></i></button>
-                <button class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-eye"></i></button>
-              </td>`;
+        <td>${timeStr}</td>
+        <td>${title}</td>
+        <td>${room}</td>
+        <td>
+          <a class="btn btn-sm btn-success me-1"
+             href="active-meeting.html?id=${m.id}"
+             title="Open meeting">
+            <i class="bi bi-camera-video"></i>
+          </a>
+          <a class="btn btn-sm btn-outline-primary"
+             href="minutes.html?meetingId=${m.id}"
+             title="View minutes">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>`;
                     tbody.appendChild(tr);
                 }
-            } catch (e) { console.warn('upcoming error', e); }
+            } catch (e) {
+                console.warn('upcoming error', e);
+            }
         }
+
 
         // --- Room availability (with visible states + logs) ---
         const hm = d => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
