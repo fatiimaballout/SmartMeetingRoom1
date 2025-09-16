@@ -197,8 +197,9 @@
     <script src="/js/main.js"></script>
 
     <!-- Inline page logic -->
+    <!-- Inline page logic -->
     <script>
-        // --- Minimal auth helpers (match your admin.html pattern) ---
+        // --- Auth helpers ---
         function getToken() {
             return localStorage.getItem('smr_access_token') || sessionStorage.getItem('smr_access_token') || '';
         }
@@ -212,8 +213,8 @@
             return fetch(url, { ...opts, headers });
         }
         async function guardSignedIn() {
-            const token = getToken();
-            if (!token) { location.href = '/login.html'; return null; }
+            const t = getToken();
+            if (!t) { location.href = '/login.html'; return null; }
             const meRes = await authedFetch('/api/auth/me');
             if (!meRes.ok) { location.href = '/login.html'; return null; }
             const me = await meRes.json();
@@ -221,13 +222,12 @@
             return me;
         }
 
-        // --- UI wiring ---
+        // --- Buttons / header ---
         function wireQuickButtons() {
             const go = (p) => () => location.href = p;
-            const byId = (id) => document.getElementById(id);
-            byId('btnQuickSchedule')?.addEventListener('click', go('booking.html'));
-            byId('btnQuickJoin')?.addEventListener('click', go('active-meeting.html'));
-            byId('btnQuickMinutes')?.addEventListener('click', go('minutes.html'));
+            document.getElementById('btnQuickSchedule')?.addEventListener('click', go('booking.html'));
+            document.getElementById('btnQuickJoin')?.addEventListener('click', go('active-meeting.html'));
+            document.getElementById('btnQuickMinutes')?.addEventListener('click', go('minutes.html'));
             document.getElementById('btnToggleRTL')?.addEventListener('click', () => {
                 const html = document.documentElement;
                 html.setAttribute('dir', html.getAttribute('dir') === 'rtl' ? 'ltr' : 'rtl');
@@ -240,13 +240,12 @@
             });
         }
 
-        // --- Upcoming meetings (optional endpoint) ---
-        // Tries /api/meetings/upcoming. If it doesn't exist yet, nothing breaks.
+        // --- Upcoming (optional) ---
         async function loadUpcomingMeetings() {
             try {
                 const res = await authedFetch('/api/meetings/upcoming');
-                if (!res.ok) return; // silently skip if endpoint not present
-                const items = await res.json(); // expect [{startTime,title,room:{name}}...]
+                if (!res.ok) return;
+                const items = await res.json();
                 const tbody = document.getElementById('upcomingBody');
                 tbody.innerHTML = '';
                 if (!Array.isArray(items) || !items.length) {
@@ -258,24 +257,88 @@
                     const timeStr = start ? start.toLocaleString() : '';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                <td>${timeStr}</td>
-                <td>${m.title ?? ''}</td>
-                <td>${m.room?.name ?? ''}</td>
-                <td>
-                  <button class="btn btn-sm btn-success me-1" title="Join"><i class="bi bi-camera-video"></i></button>
-                  <button class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-eye"></i></button>
-                </td>`;
+              <td>${timeStr}</td>
+              <td>${m.title ?? ''}</td>
+              <td>${m.room?.name ?? ''}</td>
+              <td>
+                <button class="btn btn-sm btn-success me-1" title="Join"><i class="bi bi-camera-video"></i></button>
+                <button class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-eye"></i></button>
+              </td>`;
                     tbody.appendChild(tr);
                 }
-            } catch { /* ignore */ }
+            } catch (e) { console.warn('upcoming error', e); }
+        }
+
+        // --- Room availability (with visible states + logs) ---
+        const hm = d => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        async function loadRoomAvailabilityQuick() {
+            const wrap = document.getElementById('calendarRooms');
+            const now = new Date();
+            const to = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+            // show loading immediately so the placeholder disappears
+            wrap.innerHTML = '<div class="text-muted p-3">Loading room availability…</div>';
+
+            try {
+                const qs = new URLSearchParams({
+                    fromUtc: now.toISOString(),
+                    toUtc: to.toISOString()
+                });
+                const url = `/api/meetings/availability?${qs.toString()}`;
+                console.log('GET', url);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('availability failed:', res.status, text);
+                    wrap.innerHTML = `<div class="text-danger p-3">Failed to load availability (${res.status}).</div>`;
+                    return;
+                }
+
+                const rows = await res.json(); // expect [{roomId, roomName, fromUtc, toUtc, status}]
+                console.log('availability rows:', rows);
+
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    wrap.innerHTML = '<div class="text-center text-muted p-5">No rooms defined.</div>';
+                    return;
+                }
+
+                wrap.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small text-muted">Window: ${hm(now)} – ${hm(to)}</div>
+              <button id="btnRefreshAvail" class="btn btn-sm btn-outline-secondary">Refresh</button>
+            </div>
+            <div class="row g-3">
+              ${rows.map(r => `
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                  <div class="border rounded p-3 h-100">
+                    <div class="fw-semibold mb-1">${(r.roomName || 'Room ' + r.roomId)}</div>
+                    <span class="badge ${r.status === 'Free' ? 'bg-success' : 'bg-danger'}">${r.status}</span>
+                    <div class="small text-muted mt-2">${hm(r.fromUtc)} – ${hm(r.toUtc)}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+                document.getElementById('btnRefreshAvail')?.addEventListener('click', loadRoomAvailabilityQuick);
+            } catch (e) {
+                console.error('availability exception:', e);
+                wrap.innerHTML = `<div class="text-danger p-3">Error loading availability.</div>`;
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
             wireQuickButtons();
             const me = await guardSignedIn();
             if (!me) return;
+
+            // Always try to load; any error shows on the page and logs in console
+            await loadRoomAvailabilityQuick();
+            setInterval(loadRoomAvailabilityQuick, 60_000);
             loadUpcomingMeetings();
         });
     </script>
+
+
 </body>
 </html>

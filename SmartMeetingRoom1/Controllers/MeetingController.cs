@@ -288,4 +288,71 @@ public class MeetingsController : ControllerBase
     public record InviteDto(List<string> Emails);
     [HttpPost("{id:int}/invite")]
     public IActionResult Invite(int id, [FromBody] InviteDto dto) => NoContent();
+
+    // GET /api/meetings/upcoming?days=7&mine=true&take=10
+    [HttpGet("upcoming")]
+    public async Task<ActionResult<IEnumerable<object>>> Upcoming(
+        [FromQuery] int days = 7,
+        [FromQuery] bool mine = true,
+        [FromQuery] int take = 10)
+    {
+        var now = DateTime.UtcNow;
+        var toUtc = now.AddDays(days);
+
+        // who is the current user?
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out var userId);
+
+        string? currentEmail = null;
+        if (userId > 0)
+        {
+            currentEmail = await _userManager.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+        }
+        currentEmail ??= User.FindFirstValue(ClaimTypes.Email);
+
+        // base query: future meetings in window
+        var query = _db.Meetings
+            .AsNoTracking()
+            .Include(m => m.Room)
+            .Include(m => m.Organizer)
+            .Where(m => m.StartTime >= now && m.StartTime < toUtc);
+
+        // "mine" = organizer or attendee (by email)
+        if (mine && (userId > 0 || !string.IsNullOrEmpty(currentEmail)))
+        {
+            if (!string.IsNullOrEmpty(currentEmail))
+            {
+                query = query.Where(m =>
+                    m.OrganizerId == userId ||
+                    _db.MeetingAttendees.Any(a => a.MeetingId == m.Id && a.Email == currentEmail));
+            }
+            else
+            {
+                query = query.Where(m => m.OrganizerId == userId);
+            }
+        }
+
+        var items = await query
+            .OrderBy(m => m.StartTime)
+            .Take(Math.Clamp(take, 1, 50))
+            .Select(m => new
+            {
+                id = m.Id,
+                title = m.Title,
+                startTime = m.StartTime,
+                endTime = m.EndTime,
+                status = m.Status,
+                // Dashboard JS supports either room.name or plain roomName
+                room = new { name = m.Room.Name },
+                roomName = m.Room.Name,
+                organizer = m.Organizer.UserName ?? m.Organizer.Email ?? m.Organizer.Id.ToString()
+            })
+            .ToListAsync();
+
+        return Ok(items);
+    }
+
 }
