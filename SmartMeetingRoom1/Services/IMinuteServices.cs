@@ -8,51 +8,64 @@ namespace SmartMeetingRoom1.Services
     public class IMinuteServices : IMinute
     {
         private readonly AppDbContext _db;
+        public IMinuteServices(AppDbContext db) => _db = db;
 
-        public IMinuteServices(AppDbContext db)
-        {
-            _db = db;
-        }
-
-        private MinuteDto MapToDto(Minute m) => new()
+        // Map entity -> DTO (UI expects lastSavedUtc + notes)
+        private static MinuteDto MapToDto(Minute m) => new()
         {
             Id = m.Id,
             MeetingId = m.MeetingId,
             CreatorId = m.CreatorId,
+            Notes = m.Notes,           // <-- added
             Discussion = m.Discussion,
             Decisions = m.Decisions,
-            CreatedUtc = m.CreatedUtc
+            LastSavedUtc = m.CreatedUtc       // UI reads minutes.lastSavedUtc
         };
 
         public async Task<MinuteDto?> GetByIdAsync(int id)
         {
-            var minute = await _db.Minutes
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            return minute == null ? null : MapToDto(minute);
+            var minute = await _db.Minutes.AsNoTracking()
+                               .FirstOrDefaultAsync(m => m.Id == id);
+            return minute is null ? null : MapToDto(minute);
         }
+
         public async Task<MinuteDto?> GetByMeetingAsync(int meetingId)
         {
-            var minute = await _db.Minutes
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.MeetingId == meetingId);
-
-            return minute == null ? null : MapToDto(minute);
+            var minute = await _db.Minutes.AsNoTracking()
+                               .FirstOrDefaultAsync(m => m.MeetingId == meetingId);
+            return minute is null ? null : MapToDto(minute);
         }
 
         public async Task<MinuteDto> CreateAsync(CreateMinuteDto dto)
         {
-            if (!await _db.Meetings.AnyAsync(meeting => meeting.Id == dto.MeetingId))
+            // Ensure meeting exists
+            var meetingExists = await _db.Meetings
+                                         .AnyAsync(meeting => meeting.Id == dto.MeetingId);
+            if (!meetingExists)
                 throw new ArgumentException($"Meeting ID {dto.MeetingId} does not exist.");
 
-            if (!await _db.Users.AnyAsync(user => user.Id == dto.CreatorId))
-                throw new ArgumentException($"Creator ID {dto.CreatorId} does not exist.");
+            // Optional: CreatorId may be null/omitted
+            if (dto.CreatorId.HasValue && dto.CreatorId.Value > 0)
+            {
+                var userExists = await _db.Users.AnyAsync(u => u.Id == dto.CreatorId.Value);
+                if (!userExists)
+                    throw new ArgumentException($"Creator ID {dto.CreatorId} does not exist.");
+            }
+            else
+            {
+                dto.CreatorId = null; // tolerate missing creator
+            }
+
+            // One minutes row per meeting: if it exists, just return it
+            var existing = await _db.Minutes.FirstOrDefaultAsync(x => x.MeetingId == dto.MeetingId);
+            if (existing is not null)
+                return MapToDto(existing);
 
             var minute = new Minute
             {
                 MeetingId = dto.MeetingId,
-                CreatorId = dto.CreatorId,
+                CreatorId = dto.CreatorId ?? 0,
+                Notes = dto.Notes ?? string.Empty,   // <-- added
                 Discussion = dto.Discussion,
                 Decisions = dto.Decisions,
                 CreatedUtc = DateTime.UtcNow
@@ -66,11 +79,13 @@ namespace SmartMeetingRoom1.Services
 
         public async Task<bool> UpdateAsync(int id, UpdateMinuteDto dto)
         {
-            var minute = await _db.Minutes.FindAsync(id);
-            if (minute == null) return false;
+            var minute = await _db.Minutes.FirstOrDefaultAsync(m => m.Id == id);
+            if (minute is null) return false;
 
-            minute.Discussion = dto.Discussion;
-            minute.Decisions = dto.Decisions;
+            // PATCH semantics: only overwrite when provided (null means "leave as is")
+            if (dto.Notes is not null) minute.Notes = dto.Notes;      // <-- added
+            if (dto.Discussion is not null) minute.Discussion = dto.Discussion;
+            if (dto.Decisions is not null) minute.Decisions = dto.Decisions;
 
             await _db.SaveChangesAsync();
             return true;
@@ -79,7 +94,7 @@ namespace SmartMeetingRoom1.Services
         public async Task<bool> DeleteAsync(int id)
         {
             var minute = await _db.Minutes.FindAsync(id);
-            if (minute == null) return false;
+            if (minute is null) return false;
 
             _db.Minutes.Remove(minute);
             await _db.SaveChangesAsync();

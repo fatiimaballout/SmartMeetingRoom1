@@ -11,6 +11,7 @@ public class MinuteDto
     public string Decisions { get; set; } = string.Empty;
 
     public DateTime CreatedUtc { get; set; }   // single source of truth
+    public DateTime LastSavedUtc { get; set; }
 }
 
 

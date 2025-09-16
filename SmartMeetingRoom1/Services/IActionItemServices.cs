@@ -38,16 +38,18 @@ namespace SmartMeetingRoom1.Services
             if (!await _db.Minutes.AnyAsync(m => m.Id == dto.MinutesId))
                 throw new ArgumentException($"Minute ID {dto.MinutesId} does not exist.");
 
-            if (!await _db.Users.AnyAsync(u => u.Id == dto.AssignedTo))
-                throw new ArgumentException($"User ID {dto.AssignedTo} does not exist.");
+            // If you want to *optionally* validate when a numeric ID is supplied:
+            // if (int.TryParse(dto.AssignedTo, out var uid) &&
+            //     !await _db.Users.AnyAsync(u => u.Id == uid))
+            //     throw new ArgumentException($"User ID {uid} does not exist.");
 
             var action = new ActionItem
             {
                 MinutesId = dto.MinutesId,
-                AssignedTo = dto.AssignedTo,
-                Description = dto.Description,
-                Status = dto.Status ?? "pending",
-                DueDate = dto.DueDate
+                Description = dto.Description.Trim(),
+                AssignedTo = string.IsNullOrWhiteSpace(dto.AssignedTo) ? null : dto.AssignedTo.Trim(),
+                DueDate = dto.DueDate,
+                Status = dto.Status ?? "Pending"
             };
 
             _db.ActionItems.Add(action);
@@ -55,6 +57,7 @@ namespace SmartMeetingRoom1.Services
 
             return MapToDto(action);
         }
+
 
         public async Task<bool> UpdateAsync(int id, UpdateActionItemDto dto)
         {

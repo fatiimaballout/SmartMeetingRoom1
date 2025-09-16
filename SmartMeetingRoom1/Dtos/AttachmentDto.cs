@@ -7,8 +7,11 @@ namespace SmartMeetingRoom1.Dtos
         public string FilePath { get; set; }
         public string FileName { get; set; }
         public DateTime CreatedAt { get; set; }
-        public int UploadedBy { get; set; }
+        public int? UploadedBy { get; set; }
         public int? MeetingId { get; set; }
         public int? MinuteId { get; set; }
+        public int? UploaderId { get; set; }
+        public long? SizeBytes { get; set; }
+
     }
 }

@@ -21,6 +21,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<ActionItem>(e =>
+        {
+            e.ToTable("ActionItems");   // existing table
+            e.HasKey(x => x.Id);
+
+            // keep simple so EF doesn't try to change the DB
+            e.Property(x => x.Description).IsRequired();
+            e.Property(x => x.Status).IsRequired();
+
+            e.HasOne(x => x.Minute)
+             .WithMany(m => m.ActionItems)
+             .HasForeignKey(x => x.MinutesId)   // NOTE: MinutesId (plural) in DB
+             .OnDelete(DeleteBehavior.Cascade);
+        });
 
         // Minute -> Creator (Identity user), no back-collection
         modelBuilder.Entity<Minute>()
@@ -43,22 +57,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>
             .HasForeignKey(m => m.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // MeetingAttendee composite key
-        modelBuilder.Entity<MeetingAttendee>()
-            .HasKey(ma => new { ma.MeetingId, ma.UserId });
+        modelBuilder.Entity<MeetingAttendee>(e =>
+        {
+            e.HasKey(x => new { x.MeetingId, x.Email });      // composite key
+            e.Property(x => x.Email).HasMaxLength(256).IsRequired();
+            e.HasOne(x => x.Meeting)
+             .WithMany(m => m.Attendees)
+             .HasForeignKey(x => x.MeetingId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
 
-        modelBuilder.Entity<MeetingAttendee>()
-            .HasOne(ma => ma.Meeting)
-            .WithMany(m => m.Attendees)
-            .HasForeignKey(ma => ma.MeetingId)
-            .OnDelete(DeleteBehavior.Cascade);
 
-        // Attendee -> domain User with back-collection
-        modelBuilder.Entity<MeetingAttendee>()
-            .HasOne(ma => ma.User)
-            .WithMany(u => u.MeetingAttendees)
-            .HasForeignKey(ma => ma.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         // Attachment -> Meeting
         modelBuilder.Entity<Attachment>()
@@ -74,12 +83,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>
             .HasForeignKey(ai => ai.MinutesId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // ActionItem -> Assignee (domain User)
-        modelBuilder.Entity<ActionItem>()
-            .HasOne(ai => ai.Assignee)
-            .WithMany(u => u.AssignedActionItems)
-            .HasForeignKey(ai => ai.AssignedTo)
-            .OnDelete(DeleteBehavior.Restrict);
+        // Models/AppDbContext.cs (inside OnModelCreating or fluent config)
+        modelBuilder.Entity<Minute>(e =>
+        {
+            e.ToTable("Minutes");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Notes).HasColumnName("Notes");
+            e.Property(x => x.Discussion).HasColumnName("Discussion");
+            e.Property(x => x.Decisions).HasColumnName("Decisions");
+            e.Property(x => x.CreatedUtc).HasColumnName("CreatedUtc");
+        });
+
 
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(x => x.Token)

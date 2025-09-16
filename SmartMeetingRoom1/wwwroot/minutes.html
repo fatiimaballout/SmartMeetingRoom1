@@ -46,9 +46,7 @@
             <li class="nav-item"><a class="nav-link collapsed" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
             <li class="nav-item"><a class="nav-link collapsed" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
             <li class="nav-item"><a class="nav-link" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="review.html"><i class="bi bi-search"></i><span>Review</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="review.html"><i class="bi bi-search"></i><span>Review</span></a></li>
-
+            
         </ul>
     </aside>
 
@@ -105,7 +103,7 @@
                         <div class="card-body">
                             <h5 class="card-title">Agenda</h5>
                             <ul class="list-group list-group-flush" id="agendaList">
-                                <li class="list-group-item text-muted">Optional feature – not implemented.</li>
+                                <li class="list-group-item text-muted">Loading…</li>
                             </ul>
                             <div class="text-danger small mt-2" id="agendaError"></div>
                         </div>
@@ -294,11 +292,10 @@
             const t = new bootstrap.Toast(document.getElementById('okToast'));
             t.show();
         }
-
-        // Finder helpers
         function ymd(d) { const t = new Date(d); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; }
         function fmtHM(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
         function debounce(fn, ms = 300) { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; }
+        function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
         // ===== State =====
         let meetingId = q('meetingId') ? parseInt(q('meetingId'), 10) : null;
@@ -314,6 +311,9 @@
 
         const $attWrap = document.getElementById('attendees');
         const $attErr = document.getElementById('attError');
+
+        const $agendaList = document.getElementById('agendaList');
+        const $agendaErr = document.getElementById('agendaError');
 
         const $notes = document.getElementById('notes');
         const $notesErr = document.getElementById('notesError');
@@ -356,7 +356,8 @@
                 const m = await r.json();
                 $title.textContent = m.title || 'Meeting';
                 $when.textContent = fmtRange(m.startTime, m.endTime);
-                $room.textContent = m.roomName ? `Room: ${m.roomName}` : '';
+                const roomName = m.roomName || m.room || (m.room && m.room.name) || '';
+                $room.textContent = roomName ? `Room: ${roomName}` : '';
                 setBadge($status, m.status);
             } catch (err) {
                 console.error(err);
@@ -376,7 +377,7 @@
                     return;
                 }
                 $attWrap.innerHTML = rows.map(a =>
-                    `<span class="badge ${a.isHost ? 'bg-success' : 'bg-primary'}">${a.name || ('User ' + a.userId)}${a.isHost ? ' (Host)' : ''}</span>`
+                    `<span class="badge ${a.isHost ? 'bg-success' : 'bg-primary'}">${escapeHtml(a.name || ('User ' + a.userId))}${a.isHost ? ' (Host)' : ''}</span>`
                 ).join(' ');
             } catch (err) {
                 console.error(err);
@@ -384,9 +385,34 @@
             }
         }
 
+        // ===== Load agenda =====
+        async function loadAgenda() {
+            if (!meetingId) {
+                $agendaList.innerHTML = '<li class="list-group-item text-muted">No meeting selected.</li>';
+                return;
+            }
+            try {
+                const r = await authedFetch(`/api/meetings/${meetingId}/agenda`);
+                if (!r.ok) throw new Error(await r.text());
+                const data = await r.json(); // { agenda: string | null }
+                const txt = (data.agenda || '').trim();
+                if (!txt) {
+                    $agendaList.innerHTML = '<li class="list-group-item text-muted">No agenda provided.</li>';
+                    return;
+                }
+                const items = txt.split(/\r?\n|;|•/).map(s => s.trim()).filter(Boolean);
+                $agendaList.innerHTML = items.map(it =>
+                    `<li class="list-group-item"><i class="bi bi-dot me-1"></i>${escapeHtml(it)}</li>`
+                ).join('');
+            } catch (err) {
+                console.error(err);
+                $agendaErr.textContent = 'Failed to load agenda.';
+                $agendaList.innerHTML = '<li class="list-group-item text-muted">—</li>';
+            }
+        }
+
         // ===== Minutes: ensure we have a minutes record =====
         async function ensureMinutes() {
-            // If minutesId is provided, load it and derive meetingId if missing
             if (minutesId) {
                 const r = await authedFetch(`/api/minutes/${minutesId}`);
                 if (!r.ok) throw new Error('Minutes not found.');
@@ -395,7 +421,6 @@
                 return;
             }
 
-            // Else if meetingId provided, try a convenience endpoint (if you added it)
             if (meetingId) {
                 let r = await authedFetch(`/api/minutes/by-meeting/${meetingId}`);
                 if (r.ok) {
@@ -404,7 +429,6 @@
                     return;
                 }
 
-                // Fallback: create a bare minutes record
                 r = await authedFetch('/api/minutes', {
                     method: 'POST',
                     body: JSON.stringify({ meetingId: meetingId, notes: '' })
@@ -461,17 +485,17 @@
                     return;
                 }
                 $aiBody.innerHTML = rows.map(ai => `
-            <tr data-id="${ai.id}">
-              <td>${ai.description}</td>
-              <td>${ai.assigneeName || ai.assignedTo || ''}</td>
-              <td>${ai.dueDate ? new Date(ai.dueDate).toISOString().slice(0, 10) : ''}</td>
-              <td><span class="badge ${ai.status === 'Done' ? 'bg-success' : 'bg-warning'}">${ai.status || 'Pending'}</span></td>
-              <td>
-                <button class="btn btn-sm btn-outline-success me-1 btn-ai-done">Done</button>
-                <button class="btn btn-sm btn-outline-danger btn-ai-del"><i class="bi bi-trash"></i></button>
-              </td>
-            </tr>
-          `).join('');
+              <tr data-id="${ai.id}">
+                <td>${escapeHtml(ai.description || '')}</td>
+                <td>${escapeHtml(ai.assigneeName || ai.assignedTo || '')}</td>
+                <td>${ai.dueDate ? new Date(ai.dueDate).toISOString().slice(0, 10) : ''}</td>
+                <td><span class="badge ${ai.status === 'Done' ? 'bg-success' : 'bg-warning'}">${escapeHtml(ai.status || 'Pending')}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-outline-success me-1 btn-ai-done">Done</button>
+                  <button class="btn btn-sm btn-outline-danger btn-ai-del"><i class="bi bi-trash"></i></button>
+                </td>
+              </tr>
+            `).join('');
             } catch (err) {
                 console.error(err);
                 $aiErr.textContent = 'Failed to load action items.';
@@ -544,11 +568,11 @@
                     return;
                 }
                 $files.innerHTML = rows.map(a => `
-            <div class="list-group-item d-flex justify-content-between align-items-center" data-id="${a.id}">
-              <span><i class="bi bi-paperclip me-2"></i>${a.fileName}</span>
-              <button class="btn btn-sm btn-outline-danger btn-att-del"><i class="bi bi-x"></i></button>
-            </div>
-          `).join('');
+              <div class="list-group-item d-flex justify-content-between align-items-center" data-id="${a.id}">
+                <span><i class="bi bi-paperclip me-2"></i>${escapeHtml(a.fileName || '')}</span>
+                <button class="btn btn-sm btn-outline-danger btn-att-del"><i class="bi bi-x"></i></button>
+              </div>
+            `).join('');
             } catch (err) {
                 console.error(err);
                 $attchErr.textContent = 'Failed to load attachments.';
@@ -594,9 +618,9 @@
         document.getElementById('btnFinalize')?.addEventListener('click', finalizeShare);
 
         // ===== Finder logic =====
-        if ($findDate) $findDate.value = ymd(new Date());
+        if (document.getElementById('findDate')) document.getElementById('findDate').value = ymd(new Date());
 
-        $btnOpenFinder?.addEventListener('click', () => {
+        document.getElementById('btnOpenFinder')?.addEventListener('click', () => {
             bootstrap.Modal.getOrCreateInstance($findModal).show();
             runFinder();
         });
@@ -628,17 +652,17 @@
                 }
 
                 $findResults.innerHTML = rows.map(r => `
-            <tr>
-              <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
-              <td>
-                <div class="fw-semibold">${r.title || 'Untitled'}</div>
-                <small class="text-muted">Organizer: ${r.organizer || ''}</small>
-              </td>
-              <td>${r.room || ''}</td>
-              <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${r.status || ''}</span></td>
-              <td><button class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
-            </tr>
-          `).join('');
+              <tr>
+                <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
+                <td>
+                  <div class="fw-semibold">${escapeHtml(r.title || 'Untitled')}</div>
+                  <small class="text-muted">Organizer: ${escapeHtml(r.organizer || '')}</small>
+                </td>
+                <td>${escapeHtml(r.room || '')}</td>
+                <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${escapeHtml(r.status || '')}</span></td>
+                <td><button class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
+              </tr>
+            `).join('');
             } catch (err) {
                 console.error(err);
                 $findError.textContent = 'Search failed.';
@@ -658,8 +682,7 @@
             minutesId = null;
             $headErr.textContent = '';
             try {
-                await ensureMinutes();         // load/create minutes for meetingId
-                // preload notes
+                await ensureMinutes();
                 if (minutes && typeof minutes.notes === 'string') $notes.value = minutes.notes;
                 if (minutes && minutes.lastSavedUtc) {
                     $lastSaved.textContent = 'Last saved: ' + new Date(minutes.lastSavedUtc).toLocaleString();
@@ -669,6 +692,7 @@
 
                 await loadMeetingHeader();
                 await loadAttendees();
+                await loadAgenda();
                 await loadActionItems();
                 await loadAttachments();
 
@@ -683,7 +707,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const hasQuery = !!q('minutesId') || !!q('meetingId');
             if (!hasQuery) {
-                // No query → open finder automatically
                 bootstrap.Modal.getOrCreateInstance($findModal).show();
                 runFinder();
                 return;
@@ -698,6 +721,7 @@
 
                 await loadMeetingHeader();
                 await loadAttendees();
+                await loadAgenda();
                 await loadActionItems();
                 await loadAttachments();
             } catch (err) {

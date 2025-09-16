@@ -7,10 +7,12 @@ namespace SmartMeetingRoom1.Models
         public int Id { get; set; }
 
         public string FilePath { get; set; }       
-        public string FileName { get; set; }       
+        public string? FileName { get; set; }
+        public long SizeBytes { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        public int UploadedBy { get; set; }
+        public int? UploadedBy { get; set; }
+         public int? UploaderId { get; set; }
         public User Uploader { get; set; }
 
         public int? MeetingId { get; set; }       
@@ -18,5 +20,6 @@ namespace SmartMeetingRoom1.Models
 
         public int? MinuteId { get; set; }         
         public Minute Minute { get; set; }
+        public byte[]? FileContent { get; set; }
     }
 }

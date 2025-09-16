@@ -5,8 +5,12 @@ namespace SmartMeetingRoom1.Dtos
     {
         public int Id { get; set; }
         public int MeetingId { get; set; }
+        public Meeting Meeting { get; set; } = null!;
+
         public int UserId { get; set; }
-        public string Status { get; set; } 
-        public DateTime CreatedAt { get; set; }
+        public User User { get; set; } = null!;
+
+        public string Status { get; set; } = "Invited";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

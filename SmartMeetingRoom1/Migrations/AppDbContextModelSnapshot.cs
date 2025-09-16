@@ -29,8 +29,8 @@ namespace SmartMeetingRoom1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AssignedTo")
-                        .HasColumnType("int");
+                    b.Property<string>("AssignedTo")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -46,13 +46,16 @@ namespace SmartMeetingRoom1.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("AssignedTo");
+                    b.HasKey("Id");
 
                     b.HasIndex("MinutesId");
 
-                    b.ToTable("ActionItems");
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ActionItems", (string)null);
                 });
 
             modelBuilder.Entity("Meeting", b =>
@@ -101,8 +104,9 @@ namespace SmartMeetingRoom1.Migrations
                     b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -114,7 +118,10 @@ namespace SmartMeetingRoom1.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("MeetingId", "UserId");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MeetingId", "Email");
 
                     b.HasIndex("UserId");
 
@@ -263,25 +270,29 @@ namespace SmartMeetingRoom1.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreatedUtc");
 
                     b.Property<int>("CreatorId")
                         .HasColumnType("int");
 
                     b.Property<string>("Decisions")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Decisions");
 
                     b.Property<string>("Discussion")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Discussion");
 
                     b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Notes");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
@@ -294,7 +305,7 @@ namespace SmartMeetingRoom1.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Minutes");
+                    b.ToTable("Minutes", (string)null);
                 });
 
             modelBuilder.Entity("SmartMeetingRoom1.Models.ApplicationUser", b =>
@@ -376,8 +387,10 @@ namespace SmartMeetingRoom1.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("FileContent")
+                        .HasColumnType("varbinary(max)");
+
                     b.Property<string>("FileName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FilePath")
@@ -390,10 +403,13 @@ namespace SmartMeetingRoom1.Migrations
                     b.Property<int?>("MinuteId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UploadedBy")
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("UploadedBy")
                         .HasColumnType("int");
 
-                    b.Property<int>("UploaderId")
+                    b.Property<int?>("UploaderId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -554,18 +570,15 @@ namespace SmartMeetingRoom1.Migrations
 
             modelBuilder.Entity("ActionItem", b =>
                 {
-                    b.HasOne("User", "Assignee")
-                        .WithMany("AssignedActionItems")
-                        .HasForeignKey("AssignedTo")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Minute", "Minute")
                         .WithMany("ActionItems")
                         .HasForeignKey("MinutesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Assignee");
+                    b.HasOne("User", null)
+                        .WithMany("AssignedActionItems")
+                        .HasForeignKey("UserId");
 
                     b.Navigation("Minute");
                 });
@@ -600,7 +613,7 @@ namespace SmartMeetingRoom1.Migrations
                     b.HasOne("User", "User")
                         .WithMany("MeetingAttendees")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Meeting");
@@ -695,9 +708,7 @@ namespace SmartMeetingRoom1.Migrations
 
                     b.HasOne("User", "Uploader")
                         .WithMany("UploadedFiles")
-                        .HasForeignKey("UploaderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UploaderId");
 
                     b.Navigation("Meeting");
 

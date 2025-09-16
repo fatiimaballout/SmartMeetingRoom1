@@ -47,7 +47,6 @@
             <li class="nav-item"><a class="nav-link" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
             <li class="nav-item"><a class="nav-link collapsed" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
             <li class="nav-item"><a class="nav-link collapsed" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="review.html"><i class="bi bi-search"></i><span>Review</span></a></li>
         </ul>
     </aside>
 
@@ -191,18 +190,35 @@
         (function wireAttendeeChips() {
             const input = document.getElementById('meetingAttendees');
             const pills = document.getElementById('attendeePills');
+
+            function allEmails() {
+                return Array.from(document.querySelectorAll('#attendeePills .attendee-pill'))
+                    .map(p => p.dataset.email)
+                    .filter(Boolean);
+            }
+
             input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const email = input.value.trim();
-                    if (!email) return;
-                    const span = document.createElement('span');
-                    span.className = 'badge bg-primary attendee-pill';
-                    span.innerHTML = `${email} <button type="button" class="btn-close btn-close-white ms-2" aria-label="Remove"></button>`;
-                    span.querySelector('button').addEventListener('click', () => span.remove());
-                    pills.appendChild(span);
-                    input.value = '';
-                }
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+
+                const raw = (input.value || '').trim().toLowerCase();
+                if (!raw) return;
+
+                // very simple email sanity check
+                const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
+                if (!okEmail) { input.value = ''; return; }
+
+                // de-dup
+                if (allEmails().includes(raw)) { input.value = ''; return; }
+
+                const span = document.createElement('span');
+                span.className = 'badge bg-primary attendee-pill';
+                span.dataset.email = raw;
+                span.innerHTML = `${raw} <button type="button" class="btn-close btn-close-white ms-2" aria-label="Remove"></button>`;
+                span.querySelector('button').addEventListener('click', () => span.remove());
+                pills.appendChild(span);
+
+                input.value = '';
             });
         })();
 
@@ -249,7 +265,11 @@
                 return;
             }
 
-            const from = new Date(dateStr); // local from input
+            const from = new Date(dateStr); // local from input (datetime-local recommended)
+            if (isNaN(from.getTime())) {
+                body.innerHTML = '<tr><td colspan="3" class="text-danger">Invalid date/time.</td></tr>';
+                return;
+            }
             const to = new Date(from.getTime() + dur * 60000);
 
             const qs = new URLSearchParams({
@@ -277,10 +297,10 @@
                     const status = (r.status || '').toLowerCase();
                     const badge = status === 'free' ? 'bg-success' : 'bg-danger';
                     return `<tr>
-                <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
-                <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
-                <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
-              </tr>`;
+              <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
+              <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
+              <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
+            </tr>`;
                 }).join('');
             } catch (err) {
                 console.error(err);
@@ -303,20 +323,25 @@
             const title = document.getElementById('meetingTitle').value.trim();
             const start = new Date(document.getElementById('meetingDate').value);
             const duration = parseInt(document.getElementById('meetingDuration').value, 10) || 60;
-            const end = new Date(start.getTime() + duration * 60000);
             const roomId = parseInt(document.getElementById('meetingRoom').value, 10);
 
-            const attendeeEmails = Array.from(document.querySelectorAll('#attendeePills .attendee-pill'))
-                .map(p => p.firstChild.textContent.trim());
+            if (!title) { errorBox.textContent = 'Title is required.'; return; }
+            if (isNaN(start.getTime())) { errorBox.textContent = 'Invalid start date/time.'; return; }
+            if (!roomId) { errorBox.textContent = 'Please select a room.'; return; }
 
+            // collect normalized, deduped attendee emails from chips
+            const attendeeEmails = Array.from(document.querySelectorAll('#attendeePills .attendee-pill'))
+                .map(p => (p.dataset.email || '').trim().toLowerCase())
+                .filter(Boolean)
+                .filter((v, i, a) => a.indexOf(v) === i);
+
+            // ---- IMPORTANT: match backend CreateMeetingDto ----
             const dto = {
                 title: title,
                 roomId: roomId,
                 startTime: start.toISOString(),
-                endTime: end.toISOString(),
-                agenda: "",
-                status: "Scheduled",
-                attendees: attendeeEmails
+                durationMinutes: duration,
+                attendeeEmails: attendeeEmails
             };
 
             const btn = document.getElementById('btnBookNow');
@@ -333,8 +358,6 @@
                 if (res.status === 201) {
                     // CreatedAtAction returns the created MeetingDto; ASP.NET serializes to camelCase
                     const created = await res.json();
-
-                    // be defensive in case naming policy is different
                     const id = created?.id ?? created?.Id;
 
                     if (id != null) {
@@ -354,7 +377,6 @@
                     window.location.href = 'active-meeting.html';
                     return;
                 }
-
 
                 const msg = await res.text();
                 errorBox.textContent = msg || 'Booking failed.';
@@ -392,5 +414,6 @@
             loadAvailability();
         });
     </script>
+
 </body>
 </html>

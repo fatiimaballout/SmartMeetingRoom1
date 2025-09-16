@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace SmartMeetingRoom1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250910144149_Sync_Changes_20250910")]
-    partial class Sync_Changes_20250910
+    [Migration("20250915200138_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -104,8 +104,9 @@ namespace SmartMeetingRoom1.Migrations
                     b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -117,7 +118,10 @@ namespace SmartMeetingRoom1.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("MeetingId", "UserId");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MeetingId", "Email");
 
                     b.HasIndex("UserId");
 
@@ -603,7 +607,7 @@ namespace SmartMeetingRoom1.Migrations
                     b.HasOne("User", "User")
                         .WithMany("MeetingAttendees")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Meeting");

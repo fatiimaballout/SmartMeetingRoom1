@@ -19,8 +19,10 @@ namespace SmartMeetingRoom1.Services
             Id = a.Id,
             FilePath = a.FilePath,
             FileName = a.FileName,
+            SizeBytes = a.SizeBytes,
             CreatedAt = a.CreatedAt,
             UploadedBy = a.UploadedBy,
+            UploaderId = a.UploaderId,
             MeetingId = a.MeetingId,
             MinuteId = a.MinuteId
         };

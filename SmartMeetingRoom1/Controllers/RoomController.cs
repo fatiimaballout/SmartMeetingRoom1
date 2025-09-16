@@ -47,6 +47,7 @@ public class RoomsController : ControllerBase
         return NoContent();
     }
 
+
     [HttpGet] // GET /api/rooms
     public async Task<ActionResult<IEnumerable<RoomDto>>> List()
     {

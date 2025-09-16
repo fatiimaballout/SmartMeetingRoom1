@@ -1,13 +1,21 @@
-﻿public class ActionItem
+﻿// Models/ActionItem.cs
+public class ActionItem
 {
     public int Id { get; set; }
-    public int MinutesId { get; set; }
-    public Minute Minute { get; set; } = null!;
 
+    // FK to minutes
+    public int MinutesId { get; set; }
+
+    // REQUIRED
     public string Description { get; set; } = string.Empty;
+
+    // “Pending”, “Done”, etc.
     public string Status { get; set; } = "Pending";
 
-    public int? AssignedTo { get; set; }            // domain user id
-    public User? Assignee { get; set; }             // optional
+    // Email or user id as TEXT (matches what the UI sends)
+    public string? AssignedTo { get; set; }
+
     public DateTime? DueDate { get; set; }
+
+    public Minute? Minute { get; set; }
 }
