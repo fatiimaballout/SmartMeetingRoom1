@@ -135,8 +135,9 @@
                     </div>
                 </div>
 
-                <!-- Availability -->
+                <!-- Right column -->
                 <div class="col-lg-4">
+                    <!-- Availability -->
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title">Room Availability</h5>
@@ -156,7 +157,28 @@
                             </div>
                         </div>
                     </div>
-                </div>
+
+                    <!-- Agenda (SIMPLE ITEMS) -->
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Meeting Agenda</h5>
+
+                            <label for="agendaItem" class="form-label">Add item</label>
+                            <div class="input-group">
+                                <input type="text" id="agendaItem" class="form-control" placeholder="e.g., Introductions" />
+                                <button type="button" class="btn btn-outline-primary" id="btnAddAgenda">
+                                    <i class="bi bi-plus-circle me-1"></i>Add
+                                </button>
+                            </div>
+
+                            <ul class="list-group mt-3" id="agendaList">
+                                <li class="list-group-item text-muted">No items yet.</li>
+                            </ul>
+
+                            <div class="small text-muted mt-2" id="agendaCount">Items: 0</div>
+                        </div>
+                    </div>
+                </div><!-- /Right column -->
 
             </div>
         </section>
@@ -204,11 +226,9 @@
                 const raw = (input.value || '').trim().toLowerCase();
                 if (!raw) return;
 
-                // very simple email sanity check
                 const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
                 if (!okEmail) { input.value = ''; return; }
 
-                // de-dup
                 if (allEmails().includes(raw)) { input.value = ''; return; }
 
                 const span = document.createElement('span');
@@ -229,7 +249,7 @@
             try {
                 const res = await authedFetch('/api/rooms');
                 if (!res.ok) throw new Error(await res.text());
-                const rooms = await res.json(); // expect [{id,name,capacity,...}]
+                const rooms = await res.json(); // [{id,name,capacity,...}]
                 if (!Array.isArray(rooms) || rooms.length === 0) {
                     sel.innerHTML = '<option value="">No rooms found</option>';
                     return;
@@ -265,7 +285,7 @@
                 return;
             }
 
-            const from = new Date(dateStr); // local from input (datetime-local recommended)
+            const from = new Date(dateStr);
             if (isNaN(from.getTime())) {
                 body.innerHTML = '<tr><td colspan="3" class="text-danger">Invalid date/time.</td></tr>';
                 return;
@@ -287,7 +307,7 @@
                 }
                 if (!res.ok) throw new Error(await res.text());
 
-                const data = await res.json(); // [{roomId, roomName, fromUtc, toUtc, status}]
+                const data = await res.json();
                 if (!Array.isArray(data) || data.length === 0) {
                     body.innerHTML = '<tr><td colspan="3" class="text-muted">No rooms for this window.</td></tr>';
                     return;
@@ -297,15 +317,60 @@
                     const status = (r.status || '').toLowerCase();
                     const badge = status === 'free' ? 'bg-success' : 'bg-danger';
                     return `<tr>
-              <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
-              <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
-              <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
-            </tr>`;
+                            <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
+                            <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
+                            <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
+                        </tr>`;
                 }).join('');
             } catch (err) {
                 console.error(err);
                 body.innerHTML = '<tr><td colspan="3" class="text-danger">Failed to load availability.</td></tr>';
             }
+        }
+
+        /* ===== Agenda (SIMPLE ITEMS) ===== */
+        const agenda = []; // array of strings
+
+        function escapeHtml(s) {
+            return (s || '').replace(/[&<>"']/g, ch =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+
+        function renderAgenda() {
+            const list = document.getElementById('agendaList');
+            if (!agenda.length) {
+                list.innerHTML = '<li class="list-group-item text-muted">No items yet.</li>';
+            } else {
+                list.innerHTML = agenda.map((t, i) => `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>${escapeHtml(t)}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}" title="Remove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </li>
+                    `).join('');
+                list.querySelectorAll('[data-remove]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        agenda.splice(parseInt(btn.dataset.remove, 10), 1);
+                        renderAgenda();
+                    });
+                });
+            }
+            document.getElementById('agendaCount').textContent = 'Items: ' + agenda.length;
+        }
+
+        function addAgendaItem() {
+            const input = document.getElementById('agendaItem');
+            const text = (input.value || '').trim();
+            if (!text) return;
+            agenda.push(text);
+            input.value = '';
+            renderAgenda();
+        }
+
+        function buildAgendaText() {
+            // A single multiline string: "1. item\n2. item\n..."
+            return agenda.length ? agenda.map((t, i) => `${i + 1}. ${t}`).join('\n') : '';
         }
 
         // ---- create meeting via /api/meetings ----
@@ -335,13 +400,14 @@
                 .filter(Boolean)
                 .filter((v, i, a) => a.indexOf(v) === i);
 
-            // ---- IMPORTANT: match backend CreateMeetingDto ----
+            // ---- Build payload (Agenda is a TEXT string) ----
             const dto = {
                 title: title,
                 roomId: roomId,
-                startTime: start.toISOString(),
+                startTime: start.toISOString(),  // UTC
                 durationMinutes: duration,
-                attendeeEmails: attendeeEmails
+                attendeeEmails: attendeeEmails,
+                agenda: buildAgendaText()
             };
 
             const btn = document.getElementById('btnBookNow');
@@ -356,7 +422,6 @@
                 });
 
                 if (res.status === 201) {
-                    // CreatedAtAction returns the created MeetingDto; ASP.NET serializes to camelCase
                     const created = await res.json();
                     const id = created?.id ?? created?.Id;
 
@@ -364,16 +429,12 @@
                         window.location.href = `active-meeting.html?id=${encodeURIComponent(id)}`;
                         return;
                     }
-
-                    // Fallback: try Location header (/api/meetings/{id})
                     const loc = res.headers.get('Location');
                     const match = loc && loc.match(/\/meetings\/(\d+)/i);
                     if (match) {
                         window.location.href = `active-meeting.html?id=${match[1]}`;
                         return;
                     }
-
-                    // Final fallback
                     window.location.href = 'active-meeting.html';
                     return;
                 }
@@ -403,6 +464,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             wireSignOut();
             await loadRooms();
+
             document.getElementById('bookingForm').addEventListener('submit', bookMeeting);
             document.getElementById('btnCancel').addEventListener('click', () => (window.location.href = 'index.html'));
 
@@ -410,8 +472,16 @@
             ['meetingDate', 'meetingDuration', 'meetingRoom'].forEach(id => {
                 document.getElementById(id)?.addEventListener('change', loadAvailability);
             });
+
+            // Agenda triggers
+            document.getElementById('btnAddAgenda')?.addEventListener('click', addAgendaItem);
+            document.getElementById('agendaItem')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addAgendaItem(); }
+            });
+
             // Initial render
             loadAvailability();
+            renderAgenda();
         });
     </script>
 

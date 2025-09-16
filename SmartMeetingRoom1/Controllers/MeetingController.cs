@@ -168,6 +168,7 @@ public class MeetingsController : ControllerBase
             {
                 Id = m.Id,
                 Title = m.Title,
+                Agenda = m.Agenda,
                 StartTime = m.StartTime,
                 EndTime = m.EndTime,
                 Status = m.Status,
