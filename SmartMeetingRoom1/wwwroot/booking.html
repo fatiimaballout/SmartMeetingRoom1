@@ -327,7 +327,7 @@
                 body.innerHTML = '<tr><td colspan="3" class="text-danger">Failed to load availability.</td></tr>';
             }
         }
-
+        
         /* ===== Agenda (SIMPLE ITEMS) ===== */
         const agenda = []; // array of strings
 
@@ -379,6 +379,7 @@
             const form = document.getElementById('bookingForm');
             const errorBox = document.getElementById('bookError');
             errorBox.textContent = '';
+            attendees: attendeeEmails
 
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
@@ -407,7 +408,9 @@
                 startTime: start.toISOString(),  // UTC
                 durationMinutes: duration,
                 attendeeEmails: attendeeEmails,
+                attendees: attendeeEmails,
                 agenda: buildAgendaText()
+
             };
 
             const btn = document.getElementById('btnBookNow');

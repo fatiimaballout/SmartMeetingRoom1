@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace SmartMeetingRoom1.Dtos
+﻿namespace SmartMeetingRoom1.Dtos
 {
     public class CreateMeetingDto
     {
@@ -11,11 +9,6 @@ namespace SmartMeetingRoom1.Dtos
         public string Status { get; set; } = "";
         public string Title { get; set; } = "";
         public string Agenda { get; set; } = "";
-        
-        // Duration sent from booking page; optional. If 0/empty we’ll default to 60.
-        [JsonPropertyName("durationMinutes")]
-        public int? DurationMinutes { get; set; }
-
         public List<string>? Attendees { get; set; }
     }
 }

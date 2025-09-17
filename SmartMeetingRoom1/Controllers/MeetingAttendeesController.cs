@@ -9,21 +9,31 @@ using SmartMeetingRoom1.Interfaces;
 public class MeetingAttendeesController : ControllerBase
 {
     private readonly IMeetingAttendee _service;
-    public MeetingAttendeesController(IMeetingAttendee service) => _service = service;
+    private readonly ILogger<MeetingAttendeesController> _logger;
+    public MeetingAttendeesController(IMeetingAttendee service, ILogger<MeetingAttendeesController> logger)
+    {
+        _logger = logger;
+        _service = service;
+    }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<MeetingAttendeeDto>> Get(int id)
     {
-        var attendee = await _service.GetByIdAsync(id);
-        if (attendee == null) return NotFound();
-        return Ok(attendee);
+        _logger.LogWarning("Fetching attendee");
+        var attendees = await _service.GetByMeetingIdAsync(id);
+        if (attendees == null) return NotFound();
+        return Ok(attendees);
     }
 
     [HttpPost]
     [Authorize(Roles = "Admin,Employee")]
     public async Task<ActionResult<MeetingAttendeeDto>> Create([FromBody] CreateMeetingAttendeeDto dto)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         try
         {
             var created = await _service.CreateAsync(dto);

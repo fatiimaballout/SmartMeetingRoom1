@@ -214,17 +214,6 @@ namespace SmartMeetingRoom1.Controllers
             return Created(string.Empty, new { item.Id });
         }
 
-        public record UpdateAgendaDto(string? Agenda);
-
-        [HttpPatch("api/meetings/{id}/agenda")]
-        public async Task<IActionResult> UpdateAgenda(int id, [FromBody] UpdateAgendaDto dto)
-        {
-            var m = await _db.Meetings.FindAsync(id);
-            if (m is null) return NotFound();
-            m.Agenda = dto.Agenda ?? "";
-            await _db.SaveChangesAsync();
-            return NoContent();
-        }
 
         // PATCH /api/action-items/{id}/status
         [HttpPatch("/api/action-items/{id:int}/status")]

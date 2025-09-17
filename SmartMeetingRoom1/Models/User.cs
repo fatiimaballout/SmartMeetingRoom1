@@ -12,7 +12,6 @@ public class User
     public string Role { get; set; } = "Employee";
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 
-    public ICollection<MeetingAttendee> MeetingAttendees { get; set; } = new List<MeetingAttendee>();
     public ICollection<ActionItem> AssignedActionItems { get; set; } = new List<ActionItem>();
     public ICollection<Attachment> UploadedFiles { get; set; } = new List<Attachment>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();

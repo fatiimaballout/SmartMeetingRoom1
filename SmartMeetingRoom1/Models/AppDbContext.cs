@@ -57,15 +57,22 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>
             .HasForeignKey(m => m.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<MeetingAttendee>(e =>
-        {
-            e.HasKey(x => new { x.MeetingId, x.Email });      // composite key
-            e.Property(x => x.Email).HasMaxLength(256).IsRequired();
-            e.HasOne(x => x.Meeting)
-             .WithMany(m => m.Attendees)
-             .HasForeignKey(x => x.MeetingId)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
+        // MeetingAttendee composite key
+        modelBuilder.Entity<MeetingAttendee>()
+            .HasKey(ma => new { ma.MeetingId, ma.UserId });
+
+        modelBuilder.Entity<MeetingAttendee>()
+            .HasOne(ma => ma.Meeting)
+            .WithMany(m => m.Attendees)
+            .HasForeignKey(ma => ma.MeetingId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Attendee -> Identity User (ApplicationUser)
+        modelBuilder.Entity<MeetingAttendee>()
+            .HasOne(ma => ma.User)
+            .WithMany()
+            .HasForeignKey(ma => ma.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
 
 
