@@ -9,6 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
     <link href="/css/style.css" rel="stylesheet" />
     <link href="/css/custom.css" rel="stylesheet" />
+    <!-- CHART: Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -111,17 +113,46 @@
                 </div>
             </div>
 
-            <!-- ====== ROOM USAGE CHART PLACEHOLDER ====== -->
+            <!-- ====== ROOM USAGE CHART ====== -->
             <div class="row">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Room Usage Analytics</h5>
-                            <div id="chartRoomUsage" style="min-height:300px;border:2px dashed #dee2e6;border-radius:.375rem;background:#f8f9fa;">
-                                <div class="text-center text-muted p-5">
-                                    <i class="bi bi-bar-chart display-1"></i>
-                                    <p>Usage analytics chart will load here (Chart.js integration)</p>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h5 class="card-title mb-0">Room Usage Analytics</h5>
+                                <!-- CHART: quick range -->
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-secondary" id="ruBtn30">Last 30d</button>
+                                    <button class="btn btn-sm btn-outline-secondary" id="ruBtn7">Last 7d</button>
+                                    <button class="btn btn-sm btn-outline-secondary" id="ruBtnToday">Today</button>
                                 </div>
+                            </div>
+
+                            <!-- CHART: filters -->
+                            <div class="row g-2 align-items-end mt-2">
+                                <div class="col-sm-4 col-md-3">
+                                    <label class="form-label" for="ruFrom">From</label>
+                                    <input type="date" id="ruFrom" class="form-control">
+                                </div>
+                                <div class="col-sm-4 col-md-3">
+                                    <label class="form-label" for="ruTo">To</label>
+                                    <input type="date" id="ruTo" class="form-control">
+                                </div>
+                                <div class="col-sm-4 col-md-3">
+                                    <label class="form-label d-none d-sm-block">&nbsp;</label>
+                                    <button class="btn btn-outline-primary w-100" id="ruRefresh">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <canvas id="ruChart" height="120"></canvas>
+                                <div id="ruEmpty" class="text-center text-muted p-5 d-none">
+                                    <i class="bi bi-bar-chart display-1"></i>
+                                    <p>No data for the selected range.</p>
+                                </div>
+                                <div id="ruError" class="text-danger small mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -331,6 +362,10 @@
             const arr = (str || '').split(',').map(s => s.trim()).filter(Boolean);
             return arr.map(a => `<span class="badge bg-info me-1">${a}</span>`).join('');
         }
+        const ymd = d => {
+            const t = (d instanceof Date) ? d : new Date(d);
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        };
 
         // ---------- auth guard ----------
         async function guardAdmin() {
@@ -436,7 +471,7 @@
         }
 
         // ---------- employees ----------
-        let editingEmployeeRoles = []; // track roles when editing
+        let editingEmployeeRoles = [];
         function asName(u) { return u.fullName ?? u.FullName ?? u.userName ?? u.UserName ?? '(no name)'; }
         function asEmail(u) { return u.email ?? u.Email ?? ''; }
         function asRoles(u) { const r = u.roles ?? u.Roles ?? []; return Array.isArray(r) ? r : []; }
@@ -531,7 +566,6 @@
             }
 
             if (!id) {
-                // Create employee
                 if (!password) { err.textContent = 'Password is required for new employee.'; return; }
                 const res = await authedFetch('/api/users/employees', {
                     method: 'POST',
@@ -541,15 +575,12 @@
                     err.textContent = (await res.text()) || `Failed (${res.status})`; return;
                 }
                 const created = await res.json();
-                // add Admin role if selected
                 if (role === 'Admin') {
                     await ensureRole(created.id, 'Admin', true);
                 }
-                // also ensure Employee role exists on created user (defensive)
                 await ensureRole(created.id, 'Employee', true);
 
             } else {
-                // Update employee
                 const body = { fullName, email };
                 if (password) body.newPassword = password;
 
@@ -561,12 +592,10 @@
                     err.textContent = (await res.text()) || `Failed (${res.status})`; return;
                 }
 
-                // Role transitions
                 const hadAdmin = editingEmployeeRoles.includes('Admin');
                 if (role === 'Admin' && !hadAdmin) await ensureRole(id, 'Admin', true);
                 if (role === 'Employee' && hadAdmin) await ensureRole(id, 'Admin', false);
 
-                // Ensure Employee baseline role
                 const hadEmployee = editingEmployeeRoles.includes('Employee');
                 if (!hadEmployee) await ensureRole(id, 'Employee', true);
             }
@@ -580,6 +609,83 @@
             const res = await authedFetch(`/api/users/employees/${id}`, { method: 'DELETE' });
             if (res.status === 204 || res.ok) await loadEmployees();
             else alert('Delete failed: ' + await res.text());
+        }
+
+        // ---------- CHART: room usage ----------
+        let ruChart;
+        function setQuickRange(days) {
+            const to = new Date();
+            const from = new Date(to.getTime() - (days * 24 * 60 * 60 * 1000));
+            document.getElementById('ruFrom').value = ymd(from);
+            document.getElementById('ruTo').value = ymd(to);
+        }
+
+        async function loadRoomUsage() {
+            const err = document.getElementById('ruError'); err.textContent = '';
+            const empty = document.getElementById('ruEmpty');
+            const cvs = document.getElementById('ruChart');
+
+            const fromVal = document.getElementById('ruFrom').value;
+            const toVal = document.getElementById('ruTo').value;
+            if (!fromVal || !toVal) return;
+
+            const from = new Date(fromVal);
+            const to = new Date(toVal);
+            const qs = new URLSearchParams({
+                fromUtc: from.toISOString(),
+                toUtc: to.toISOString()
+            });
+
+            try {
+                const r = await authedFetch(`/api/admin/analytics/room-usage?${qs.toString()}`);
+                if (!r.ok) throw new Error(await r.text());
+                const payload = await r.json();
+                const points = payload.points ?? payload ?? [];
+
+                if (!Array.isArray(points) || points.length === 0) {
+                    empty.classList.remove('d-none');
+                    if (ruChart) { ruChart.destroy(); ruChart = null; }
+                    return;
+                }
+                empty.classList.add('d-none');
+
+                const labels = points.map(p => p.room ?? p.roomName ?? `Room ${p.roomId}`);
+                const data = points.map(p => Number(p.hoursBooked ?? p.hours ?? 0));
+
+                if (ruChart) ruChart.destroy();
+                ruChart = new Chart(cvs, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Hours booked',
+                            data
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${ctx.parsed.y.toFixed(1)} h`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Hours' }
+                            },
+                            x: { title: { display: true, text: 'Room' } }
+                        }
+                    }
+                });
+            } catch (e) {
+                if (ruChart) { ruChart.destroy(); ruChart = null; }
+                document.getElementById('ruEmpty').classList.add('d-none');
+                err.textContent = e.message || 'Failed to load room usage.';
+            }
         }
 
         // ---------- init ----------
@@ -603,10 +709,20 @@
             document.getElementById('btnAddEmp').addEventListener('click', openAddEmployee);
             document.getElementById('btnSaveEmployee').addEventListener('click', onSaveEmployee);
 
+            // CHART: wires
+            document.getElementById('ruRefresh').addEventListener('click', loadRoomUsage);
+            document.getElementById('ruBtn30').addEventListener('click', () => { setQuickRange(30); loadRoomUsage(); });
+            document.getElementById('ruBtn7').addEventListener('click', () => { setQuickRange(7); loadRoomUsage(); });
+            document.getElementById('ruBtnToday').addEventListener('click', () => { setQuickRange(0); loadRoomUsage(); });
+
             await guardAdmin();
             await loadStats();
             await loadRooms();
             await loadEmployees();
+
+            // CHART: default range -> last 30 days
+            setQuickRange(30);
+            await loadRoomUsage();
         });
     </script>
 </body>
