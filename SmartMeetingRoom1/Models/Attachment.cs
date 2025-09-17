@@ -6,7 +6,7 @@ namespace SmartMeetingRoom1.Models
     {
         public int Id { get; set; }
 
-        public string FilePath { get; set; }       
+        public string? FilePath { get; set; }       
         public string? FileName { get; set; }
         public long SizeBytes { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -20,6 +20,6 @@ namespace SmartMeetingRoom1.Models
 
         public int? MinuteId { get; set; }         
         public Minute Minute { get; set; }
-        public byte[]? FileContent { get; set; }
+        public byte[] FileContent { get; set; } = Array.Empty<byte>();
     }
 }

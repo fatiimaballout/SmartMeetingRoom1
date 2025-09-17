@@ -102,61 +102,53 @@ namespace SmartMeetingRoom1.Controllers
             return Ok(rows);
         }
 
-        // POST /api/minutes/{id}/attachments
-        [HttpPost("{id:int}/attachments")]
-        [Consumes("multipart/form-data")]
-        [DisableRequestSizeLimit]              // or [RequestSizeLimit(20_000_000)]
-        public async Task<IActionResult> UploadAttachments(int id)
+
+[HttpPost("{id:int}/attachments")]
+    [Consumes("multipart/form-data")]
+    [DisableRequestSizeLimit]
+    public async Task<IActionResult> UploadAttachments(int id, [FromForm] List<IFormFile> file)
+    {
+        var minutes = await _db.Minutes.FindAsync(id);
+        if (minutes is null) return NotFound("Minutes not found.");
+        if (file is null || file.Count == 0) return BadRequest("No files were sent.");
+
+        // handle nameidentifier or sub (OIDC)
+        var uidRaw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        int? uploaderId = int.TryParse(uidRaw, out var uid) ? uid : (int?)null;
+
+        var created = new List<object>();
+
+        foreach (var f in file.Where(f => f?.Length > 0))
         {
-            // must exist
-            var minutes = await _db.Minutes.FindAsync(id);
-            if (minutes is null) return NotFound("Minutes not found.");
+            byte[] bytes;
+            using (var ms = new MemoryStream()) { await f.CopyToAsync(ms); bytes = ms.ToArray(); }
 
-            // pick up files regardless of form key
-            var files = Request.Form?.Files;
-            if (files == null || files.Count == 0)
-                return BadRequest("No files were sent (expect multipart/form-data).");
-
-            int? uploaderId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid)
-                ? uid : (int?)null;
-
-            var created = new List<object>();
-
-            foreach (var f in files)
+            var att = new Attachment
             {
-                if (f.Length == 0) continue;
+                MinuteId = id,
+                MeetingId = minutes.MeetingId,
+                FileName = Path.GetFileName(f.FileName),
+                SizeBytes = f.Length,
+                FileContent = bytes,                 // VARBINARY(MAX)
+                CreatedAt = DateTime.UtcNow,
+                UploaderId = uploaderId,            // NULL is OK after step 1
+                UploadedBy = uploaderId,            // (or remove one column entirely)
+                FilePath = null                   // we store in DB, not disk
+            };
 
-                byte[] bytes;
-                using (var ms = new MemoryStream())
-                {
-                    await f.CopyToAsync(ms);
-                    bytes = ms.ToArray();
-                }
-
-                var att = new Attachment
-                {
-                    MinuteId = id,
-                    MeetingId = minutes.MeetingId,
-                    FileName = Path.GetFileName(f.FileName),
-                    SizeBytes = f.Length,
-                    FileContent = bytes,              // VARBINARY(MAX)
-                    CreatedAt = DateTime.UtcNow,
-                    UploaderId = uploaderId,
-                    UploadedBy = uploaderId          // if you keep both columns
-                };
-
-                _db.Attachments.Add(att);
-                await _db.SaveChangesAsync();
-                created.Add(new { att.Id, att.FileName, att.SizeBytes });
-            }
-
-            return Created(string.Empty, created);
+            _db.Attachments.Add(att);
+            await _db.SaveChangesAsync();
+            created.Add(new { att.Id, att.FileName, att.SizeBytes });
         }
 
+        return Created(string.Empty, created);
+    }
 
 
-        // GET /api/attachments/{attId}  (download)
-        [HttpGet("/api/attachments/{attId:int}")]
+
+
+    // GET /api/attachments/{attId}  (download)
+    [HttpGet("/api/attachments/{attId:int}")]
         public async Task<IActionResult> DownloadAttachment(int attId)
         {
             var a = await _db.Attachments.FindAsync(attId);

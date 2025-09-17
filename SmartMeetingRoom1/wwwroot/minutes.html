@@ -190,7 +190,6 @@
                             <small class="text-muted" id="lastSaved">Last saved: —</small>
                             <div>
                                 <button id="btnSave" class="btn btn-outline-primary me-2"><i class="bi bi-save me-1"></i>Save Draft</button>
-                                <button id="btnFinalize" class="btn btn-success"><i class="bi bi-check-circle me-1"></i>Finalize & Share</button>
                             </div>
                         </div>
                     </div>
@@ -588,23 +587,33 @@
 
         $fileInput.addEventListener('change', async (e) => {
             if (!minutesId || !e.target.files?.length) return;
+
+            const url = `/api/minutes/${minutesId}/attachments`;
+            console.log('Uploading to', url, 'files:', e.target.files.length);
+
             try {
                 const form = new FormData();
-                for (const f of e.target.files) form.append('file', f);
+                for (const f of e.target.files) form.append('file', f); // key must be "file"
+
                 const t = getToken();
-                const r = await fetch(`/api/minutes/${minutesId}/attachments`, {
+                const r = await fetch(url, {
                     method: 'POST',
-                    headers: t ? { 'Authorization': 'Bearer ' + t } : undefined,
+                    headers: t ? { Authorization: 'Bearer ' + t } : undefined,
                     body: form
                 });
-                if (!r.ok) throw new Error(await r.text());
+
+                const text = await r.text();
+                console.log('Upload response', r.status, r.statusText, text);
+
+                if (!r.ok) throw new Error(text || String(r.status));
                 e.target.value = '';
                 await loadAttachments();
             } catch (err) {
-                console.error(err);
+                console.error('UPLOAD ERROR:', err);
                 $attchErr.textContent = 'Upload API not available.';
             }
         });
+
 
         $files.addEventListener('click', async (e) => {
             const row = e.target.closest('[data-id]'); if (!row) return;

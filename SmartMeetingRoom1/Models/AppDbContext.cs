@@ -70,11 +70,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>
 
 
         // Attachment -> Meeting
+        // Attachments ↔ Meeting  (optional FK; null out on meeting delete)
         modelBuilder.Entity<Attachment>()
             .HasOne(a => a.Meeting)
             .WithMany(m => m.Attachments)
             .HasForeignKey(a => a.MeetingId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .IsRequired(false)                     // <- make FK optional
+            .OnDelete(DeleteBehavior.SetNull);     // <- if Meeting is deleted, set MeetingId = NULL
+
 
         // ActionItem -> Minute
         modelBuilder.Entity<ActionItem>()

@@ -12,6 +12,7 @@ public class MinuteDto
 
     public DateTime CreatedUtc { get; set; }   // single source of truth
     public DateTime LastSavedUtc { get; set; }
+
 }
 
 
