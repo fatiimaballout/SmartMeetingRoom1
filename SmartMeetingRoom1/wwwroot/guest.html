@@ -1,0 +1,323 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Guest – My Meetings | SmartMeet</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="/css/style.css" rel="stylesheet" />
+    <link href="/css/custom.css" rel="stylesheet" />
+</head>
+<body>
+    <!-- Header -->
+    <header id="header" class="header fixed-top d-flex align-items-center">
+        <div class="d-flex align-items-center justify-content-between">
+            <a href="guest.html" class="logo d-flex align-items-center">
+                <i class="bi bi-calendar-event"></i>
+                <span class="d-none d-lg-block">SmartMeet</span>
+            </a>
+            <i class="bi bi-list toggle-sidebar-btn"></i>
+        </div>
+        <nav class="header-nav ms-auto">
+            <a class="nav-link nav-profile d-flex align-items-center pe-0" href="/profile.html" data-bs-toggle="dropdown">
+                <img src="/assets/img/profile-img.jpg" alt="Profile" class="rounded-circle" />
+                <span class="d-none d-md-block dropdown-toggle ps-2" id="navUserName">...</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/profile.html"><i class="bi bi-person"></i> My Profile</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" href="#" id="btnSignOut"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <ul class="sidebar-nav" id="sidebar-nav">
+            <li class="nav-item"><a class="nav-link" href="guest.html"><i class="bi bi-people"></i><span>My Meetings (Guest)</span></a></li>
+        </ul>
+    </aside>
+
+    <!-- Main -->
+    <main id="main" class="main">
+        <div class="pagetitle">
+            <h1>My Meetings</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="guest.html">Home</a></li>
+                    <li class="breadcrumb-item active">Guest</li>
+                </ol>
+            </nav>
+        </div>
+
+        <section class="section">
+            <div class="row">
+                <!-- Left: search & list -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Find your meetings</h5>
+
+                            <form id="guestSearchForm" class="row g-2 align-items-end mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label" for="fltDate">Date</label>
+                                    <input id="fltDate" type="date" class="form-control" />
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label" for="fltText">Search (title)</label>
+                                    <input id="fltText" type="text" class="form-control" placeholder="Type to search…" />
+                                </div>
+                                <div class="col-md-3 d-grid">
+                                    <!-- IMPORTANT: button, not submit -->
+                                    <button type="button" id="btnSearch" class="btn btn-primary">
+                                        <i class="bi bi-search me-1"></i>Search
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:7rem;">Time</th>
+                                            <th>Title</th>
+                                            <th style="width:10rem;">Room</th>
+                                            <th style="width:8rem;">Status</th>
+                                            <th style="width:7rem;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="meetRows">
+                                        <tr><td colspan="5" class="text-muted">Pick a date or search to see your meetings.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="listError" class="text-danger small mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: details -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Details</h5>
+
+                            <div id="detailEmpty" class="text-muted">Select a meeting to view details.</div>
+
+                            <div id="detailWrap" class="d-none">
+                                <h6 id="dTitle" class="mb-1"></h6>
+                                <div class="text-muted" id="dWhen">—</div>
+                                <div class="text-muted mb-2" id="dRoom">—</div>
+                                <span class="badge bg-secondary" id="dStatus">—</span>
+
+                                <hr />
+
+                                <div class="mb-2">
+                                    <div class="fw-semibold mb-1">Attendees</div>
+                                    <div id="dAttendees" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <div class="fw-semibold mb-1">Agenda</div>
+                                    <ul id="dAgenda" class="list-group list-group-flush">
+                                        <li class="list-group-item text-muted">—</li>
+                                    </ul>
+                                </div>
+
+                                <div class="d-grid mt-3">
+                                    <button id="btnJoin" class="btn btn-success">
+                                        <i class="bi bi-camera-video me-1"></i> Join Meeting
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="detailError" class="text-danger small mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="footer" class="footer">
+        <div class="copyright">&copy; <strong><span>SmartMeet</span></strong>. All Rights Reserved</div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ===== helpers =====
+        const getToken = () =>
+            localStorage.getItem('smr_access_token') ||
+            sessionStorage.getItem('smr_access_token') || '';
+
+        async function authedFetch(url, options = {}) {
+            const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+            const t = getToken();
+            if (t) headers['Authorization'] = 'Bearer ' + t;
+            return fetch(url, { ...options, headers });
+        }
+
+        const ymd = d => {
+            const t = new Date(d);
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        };
+        const fmtHM = iso => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const escapeHtml = s => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function setBadge(el, status) {
+            const s = String(status || '');
+            const map = { scheduled: 'bg-secondary', started: 'bg-success', inprogress: 'bg-success', ended: 'bg-dark', cancelled: 'bg-danger' };
+            el.className = 'badge ' + (map[s.toLowerCase()] || 'bg-secondary');
+            el.textContent = status || '—';
+        }
+
+        // ===== auth guard: ONLY role "User" is allowed here =====
+        async function guardGuest() {
+            const t = getToken();
+            if (!t) { location.href = '/login.html'; return; }
+
+            const meRes = await authedFetch('/api/auth/me');
+            if (!meRes.ok) { location.href = '/login.html'; return; }
+
+            const me = await meRes.json();
+            document.getElementById('navUserName').textContent = me.userName ?? me.UserName ?? 'User';
+
+            const roles = (me.roles || me.Roles || []).map(r => String(r).toLowerCase());
+            if (!roles.includes('user')) { location.href = '/index.html'; } // kick non-guests back
+        }
+
+        // ===== listing =====
+        const $rows = document.getElementById('meetRows');
+        const $listErr = document.getElementById('listError');
+
+        async function loadMyMeetings() {
+            $listErr.textContent = '';
+            const date = document.getElementById('fltDate').value || ymd(new Date());
+            const qTxt = (document.getElementById('fltText').value || '').trim();
+
+            const qs = new URLSearchParams({ date, mine: 'true' });
+            if (qTxt) qs.set('q', qTxt);
+
+            try {
+                $rows.innerHTML = '<tr><td colspan="5" class="text-muted">Searching…</td></tr>';
+                const res = await authedFetch(`/api/meetings/search?${qs.toString()}`);
+                if (!res.ok) throw new Error(await res.text());
+                const rows = await res.json();
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $rows.innerHTML = '<tr><td colspan="5" class="text-muted">No meetings found for you.</td></tr>';
+                    return;
+                }
+                $rows.innerHTML = rows.map(r => `
+              <tr data-id="${r.id}">
+                <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
+                <td>
+                  <div class="fw-semibold">${escapeHtml(r.title || 'Untitled')}</div>
+                  <small class="text-muted">Organizer: ${escapeHtml(r.organizer || '')}</small>
+                </td>
+                <td>${escapeHtml(r.room || r.roomName || '')}</td>
+                <td><span class="badge ${String(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${escapeHtml(r.status || '')}</span></td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary btn-details">Details</button>
+                  <button class="btn btn-sm btn-success ms-1 btn-join">Join</button>
+                </td>
+              </tr>
+            `).join('');
+            } catch (err) {
+                console.error(err);
+                $listErr.textContent = 'Search failed.';
+            }
+        }
+
+        // ===== details panel =====
+        const $dEmpty = document.getElementById('detailEmpty');
+        const $dWrap = document.getElementById('detailWrap');
+        const $dTitle = document.getElementById('dTitle');
+        const $dWhen = document.getElementById('dWhen');
+        const $dRoom = document.getElementById('dRoom');
+        const $dStat = document.getElementById('dStatus');
+        const $dAtt = document.getElementById('dAttendees');
+        const $dAg = document.getElementById('dAgenda');
+        const $dErr = document.getElementById('detailError');
+        const $btnJoin = document.getElementById('btnJoin');
+
+        async function openDetails(id) {
+            $dErr.textContent = '';
+            $dEmpty.classList.add('d-none');
+            $dWrap.classList.remove('d-none');
+
+            try {
+                const mRes = await authedFetch(`/api/meetings/${id}`);
+                if (!mRes.ok) throw new Error(await mRes.text());
+                const m = await mRes.json();
+
+                $dTitle.textContent = m.title || 'Meeting';
+                $dWhen.textContent = `${fmtHM(m.startTime)} – ${fmtHM(m.endTime)}`;
+                $dRoom.textContent = m.roomName ? `Room: ${m.roomName}` : '';
+                setBadge($dStat, m.status);
+
+                // attendees
+                try {
+                    const aRes = await authedFetch(`/api/meetings/${id}/attendees`);
+                    if (aRes.ok) {
+                        const rows = await aRes.json();
+                        $dAtt.innerHTML = (Array.isArray(rows) && rows.length)
+                            ? rows.map(a => `<span class="badge ${a.isHost ? 'bg-success' : 'bg-primary'}">${escapeHtml(a.name || ('User ' + a.userId))}${a.isHost ? ' (Host)' : ''}</span>`).join(' ')
+                            : '<span class="text-muted">—</span>';
+                    }
+                } catch { }
+
+                // agenda
+                try {
+                    const gRes = await authedFetch(`/api/meetings/${id}/agenda`);
+                    if (gRes.ok) {
+                        const data = await gRes.json();
+                        const txt = (data.agenda || '').trim();
+                        $dAg.innerHTML = txt
+                            ? txt.split(/\r?\n|;|•/).map(s => s.trim()).filter(Boolean).map(it => `<li class="list-group-item"><i class="bi bi-dot me-1"></i>${escapeHtml(it)}</li>`).join('')
+                            : '<li class="list-group-item text-muted">—</li>';
+                    }
+                } catch { }
+
+                $btnJoin.onclick = () => { window.location.href = `active-meeting.html?id=${encodeURIComponent(id)}`; };
+            } catch (err) {
+                console.error(err);
+                $dErr.textContent = 'Failed to load meeting details.';
+            }
+        }
+
+        // ===== wire UI =====
+        document.addEventListener('DOMContentLoaded', async () => {
+            // defaults
+            const $date = document.getElementById('fltDate');
+            if (!$date.value) $date.value = ymd(new Date());
+
+            document.getElementById('guestSearchForm')?.addEventListener('submit', e => e.preventDefault());
+            document.getElementById('btnSearch').addEventListener('click', loadMyMeetings);
+            document.getElementById('fltText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); loadMyMeetings(); } });
+            document.getElementById('fltDate').addEventListener('change', loadMyMeetings);
+
+            document.getElementById('meetRows').addEventListener('click', e => {
+                const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+                const id = parseInt(tr.getAttribute('data-id'), 10);
+                if (e.target.classList.contains('btn-join')) { window.location.href = `active-meeting.html?id=${encodeURIComponent(id)}`; return; }
+                if (e.target.classList.contains('btn-details') || e.target.closest('.btn-details')) { openDetails(id); return; }
+                openDetails(id); // clicking row opens details too
+            });
+
+            document.getElementById('btnSignOut')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('smr_access_token');
+                sessionStorage.removeItem('smr_access_token');
+                location.href = '/login.html';
+            });
+
+            await guardGuest();
+            await loadMyMeetings();
+        });
+    </script>
+</body>
+</html>

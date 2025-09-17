@@ -7,7 +7,17 @@ const RTOKEN_KEY = 'smr_refresh_token';
 
 const LOGIN_PAGE = '/login.html';
 const ADMIN_HOME = '/admin.html';
-const USER_HOME = '/index.html';
+const EMPLOYEE_HOME = '/index.html';
+const GUEST_HOME = '/guest.html';
+
+// replace redirectByRoles with:
+function redirectByRoles(roles) {
+    const r = (roles || []).map(x => String(x).toLowerCase());
+    if (r.includes('admin')) return safeRedirect(ADMIN_HOME);
+    if (r.includes('user')) return safeRedirect(GUEST_HOME);   // <- "User" (guest) wins
+    return safeRedirect(EMPLOYEE_HOME);                          // employee/others
+}
+
 
 // ---------- storage ----------
 function saveTokens(json, remember) {
@@ -39,6 +49,17 @@ async function fetchMe(token) {
     if (!res.ok) throw new Error('Unauthorized');
     return res.json(); // -> { id, userName, email, roles: [...] }
 }
+(async function guardDashboardRole() {
+    const t = localStorage.getItem('smr_access_token') || sessionStorage.getItem('smr_access_token') || '';
+    if (!t) return; // your signed-in guard handles redirect to login
+    try {
+        const me = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + t } }).then(r => r.json());
+        const r = (me.roles || me.Roles || []).map(x => String(x).toLowerCase());
+        if (r.includes('user') && !r.includes('employee') && !r.includes('admin')) {
+            location.href = '/guest.html';
+        }
+    } catch { }
+})();
 
 // ---------- small utils ----------
 function pth() { return location.pathname.toLowerCase(); }
@@ -60,10 +81,6 @@ function safeRedirect(target) {
 
 function toFriendlyRole(r) { return String(r) === 'User' ? 'Guest' : String(r); }
 
-function redirectByRoles(roles) {
-    const isAdminRole = Array.isArray(roles) && roles.some(r => String(r).toLowerCase() === 'admin');
-    safeRedirect(isAdminRole ? ADMIN_HOME : USER_HOME);
-}
 
 function putUserName(me) {
     const el = document.getElementById('navUserName') || document.getElementById('meBadge');
