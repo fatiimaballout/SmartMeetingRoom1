@@ -42,11 +42,31 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
-            <li class="nav-item"><a class="nav-link collapsed" href="index.html"><i class="bi bi-grid"></i><span>Dashboard</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
-            <li class="nav-item"><a class="nav-link" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
-            
+            <li class="nav-item">
+                <a class="nav-link" href="index.html">
+                    <i class="bi bi-grid"></i><span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="bookings.html">
+                    <i class="bi bi-calendar3"></i><span>Bookings</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="booking.html">
+                    <i class="bi bi-calendar-plus"></i><span>Book Meeting</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="active-meeting.html">
+                    <i class="bi bi-camera-video"></i><span>Active Meeting</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="minutes.html">
+                    <i class="bi bi-journal-text"></i><span>Minutes</span>
+                </a>
+            </li>
         </ul>
     </aside>
 
@@ -491,17 +511,17 @@
                     return;
                 }
                 $aiBody.innerHTML = rows.map(ai => `
-              <tr data-id="${ai.id}">
-                <td>${escapeHtml(ai.description || '')}</td>
-                <td>${escapeHtml(ai.assigneeName || ai.assignedTo || '')}</td>
-                <td>${ai.dueDate ? new Date(ai.dueDate).toISOString().slice(0, 10) : ''}</td>
-                <td><span class="badge ${ai.status === 'Done' ? 'bg-success' : 'bg-warning'}">${escapeHtml(ai.status || 'Pending')}</span></td>
-                <td>
-                  <button class="btn btn-sm btn-outline-success me-1 btn-ai-done">Done</button>
-                  <button class="btn btn-sm btn-outline-danger btn-ai-del"><i class="bi bi-trash"></i></button>
-                </td>
-              </tr>
-            `).join('');
+                  <tr data-id="${ai.id}">
+                    <td>${escapeHtml(ai.description || '')}</td>
+                    <td>${escapeHtml(ai.assigneeName || ai.assignedTo || '')}</td>
+                    <td>${ai.dueDate ? new Date(ai.dueDate).toISOString().slice(0, 10) : ''}</td>
+                    <td><span class="badge ${ai.status === 'Done' ? 'bg-success' : 'bg-warning'}">${escapeHtml(ai.status || 'Pending')}</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-success me-1 btn-ai-done">Done</button>
+                      <button class="btn btn-sm btn-outline-danger btn-ai-del"><i class="bi bi-trash"></i></button>
+                    </td>
+                  </tr>
+                `).join('');
             } catch (err) {
                 console.error(err);
                 $aiErr.textContent = 'Failed to load action items.';
@@ -574,11 +594,11 @@
                     return;
                 }
                 $files.innerHTML = rows.map(a => `
-              <div class="list-group-item d-flex justify-content-between align-items-center" data-id="${a.id}">
-                <span><i class="bi bi-paperclip me-2"></i>${escapeHtml(a.fileName || '')}</span>
-                <button class="btn btn-sm btn-outline-danger btn-att-del"><i class="bi bi-x"></i></button>
-              </div>
-            `).join('');
+                  <div class="list-group-item d-flex justify-content-between align-items-center" data-id="${a.id}">
+                    <span><i class="bi bi-paperclip me-2"></i>${escapeHtml(a.fileName || '')}</span>
+                    <button class="btn btn-sm btn-outline-danger btn-att-del"><i class="bi bi-x"></i></button>
+                  </div>
+                `).join('');
             } catch (err) {
                 console.error(err);
                 $attchErr.textContent = 'Failed to load attachments.';
@@ -668,17 +688,17 @@
                 }
 
                 $findResults.innerHTML = rows.map(r => `
-              <tr>
-                <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
-                <td>
-                  <div class="fw-semibold">${escapeHtml(r.title || 'Untitled')}</div>
-                  <small class="text-muted">Organizer: ${escapeHtml(r.organizer || '')}</small>
-                </td>
-                <td>${escapeHtml(r.room || '')}</td>
-                <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${escapeHtml(r.status || '')}</span></td>
-                <td><button type="button" class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
-              </tr>
-            `).join('');
+                  <tr>
+                    <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
+                    <td>
+                      <div class="fw-semibold">${escapeHtml(r.title || 'Untitled')}</div>
+                      <small class="text-muted">Organizer: ${escapeHtml(r.organizer || '')}</small>
+                    </td>
+                    <td>${escapeHtml(r.room || '')}</td>
+                    <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'}">${escapeHtml(r.status || '')}</span></td>
+                    <td><button type="button" class="btn btn-sm btn-primary btn-use-meeting" data-id="${r.id}">Use</button></td>
+                  </tr>
+                `).join('');
             } catch (err) {
                 console.error(err);
                 $findError.textContent = 'Search failed.';
@@ -686,22 +706,22 @@
         }
 
         $findResults?.addEventListener('click', async (e) => {
-              const btn = e.target.closest('.btn-use-meeting');
-              if (!btn) return;
-              const raw = btn.getAttribute('data-id');
-              const id = Number.parseInt(raw, 10);
-              if (!Number.isFinite(id) || id <= 0) {
-                    console.error('Finder “Use” clicked but data-id is invalid:', raw);
-                    $findError.textContent = 'Can’t open that meeting (invalid id).';
-                    return;
-                  }
-              try {
-                   await openMeeting(id);
-                  } catch (err) {
-                        console.error(err);
-                        $findError.textContent = 'Failed to open that meeting.';
-                      }
-            });
+            const btn = e.target.closest('.btn-use-meeting');
+            if (!btn) return;
+            const raw = btn.getAttribute('data-id');
+            const id = Number.parseInt(raw, 10);
+            if (!Number.isFinite(id) || id <= 0) {
+                console.error('Finder “Use” clicked but data-id is invalid:', raw);
+                $findError.textContent = 'Can’t open that meeting (invalid id).';
+                return;
+            }
+            try {
+                await openMeeting(id);
+            } catch (err) {
+                console.error(err);
+                $findError.textContent = 'Failed to open that meeting.';
+            }
+        });
 
         async function openMeeting(id) {
             meetingId = id;

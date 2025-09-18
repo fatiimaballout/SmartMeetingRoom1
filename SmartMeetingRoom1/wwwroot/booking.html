@@ -43,10 +43,31 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
-            <li class="nav-item"><a class="nav-link collapsed" href="index.html"><i class="bi bi-grid"></i><span>Dashboard</span></a></li>
-            <li class="nav-item"><a class="nav-link" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
+            <li class="nav-item">
+                <a class="nav-link" href="index.html">
+                    <i class="bi bi-grid"></i><span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="bookings.html">
+                    <i class="bi bi-calendar3"></i><span>Bookings</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="booking.html">
+                    <i class="bi bi-calendar-plus"></i><span>Book Meeting</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="active-meeting.html">
+                    <i class="bi bi-camera-video"></i><span>Active Meeting</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="minutes.html">
+                    <i class="bi bi-journal-text"></i><span>Minutes</span>
+                </a>
+            </li>
         </ul>
     </aside>
 
@@ -317,10 +338,10 @@
                     const status = (r.status || '').toLowerCase();
                     const badge = status === 'free' ? 'bg-success' : 'bg-danger';
                     return `<tr>
-                                <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
-                                <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
-                                <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
-                            </tr>`;
+                                    <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
+                                    <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
+                                    <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
+                                </tr>`;
                 }).join('');
             } catch (err) {
                 console.error(err);
@@ -342,13 +363,13 @@
                 list.innerHTML = '<li class="list-group-item text-muted">No items yet.</li>';
             } else {
                 list.innerHTML = agenda.map((t, i) => `
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>${escapeHtml(t)}</span>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}" title="Remove">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </li>
-                        `).join('');
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>${escapeHtml(t)}</span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}" title="Remove">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </li>
+                            `).join('');
                 list.querySelectorAll('[data-remove]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         agenda.splice(parseInt(btn.dataset.remove, 10), 1);

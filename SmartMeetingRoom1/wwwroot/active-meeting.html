@@ -42,10 +42,31 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
-            <li class="nav-item"><a class="nav-link collapsed" href="index.html"><i class="bi bi-grid"></i><span>Dashboard</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
-            <li class="nav-item"><a class="nav-link" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
-            <li class="nav-item"><a class="nav-link collapsed" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
+            <li class="nav-item">
+                <a class="nav-link" href="index.html">
+                    <i class="bi bi-grid"></i><span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="bookings.html">
+                    <i class="bi bi-calendar3"></i><span>Bookings</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="booking.html">
+                    <i class="bi bi-calendar-plus"></i><span>Book Meeting</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="active-meeting.html">
+                    <i class="bi bi-camera-video"></i><span>Active Meeting</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="minutes.html">
+                    <i class="bi bi-journal-text"></i><span>Minutes</span>
+                </a>
+            </li>
         </ul>
     </aside>
 
@@ -305,14 +326,14 @@
                     return;
                 }
                 $att.innerHTML = rows.map(a => `
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-              <span class="bg-success rounded-circle me-2" style="width:8px;height:8px;"></span>
-              <span>${a.name || ('User ' + a.userId)}</span>
-            </div>
-            ${a.isHost ? '<small class="text-muted">Host</small>' : ''}
-          </div>
-        `).join('');
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <span class="bg-success rounded-circle me-2" style="width:8px;height:8px;"></span>
+                  <span>${a.name || ('User ' + a.userId)}</span>
+                </div>
+                ${a.isHost ? '<small class="text-muted">Host</small>' : ''}
+              </div>
+            `).join('');
             } catch (err) {
                 console.error(err);
                 $attErr.textContent = 'Failed to load attendees.';
@@ -511,18 +532,18 @@
                 }
 
                 if ($searchResults) $searchResults.innerHTML = rows.map(r => `
-          <tr>
-            <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
-            <td>
-              <div class="fw-semibold">${r.title || 'Untitled'}</div>
-              <small class="text-muted">Organizer: ${r.organizer}</small>
-            </td>
-            <td>${r.room}</td>
-            <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'
+              <tr>
+                <td>${fmtHM(r.startTime)}–${fmtHM(r.endTime)}</td>
+                <td>
+                  <div class="fw-semibold">${r.title || 'Untitled'}</div>
+                  <small class="text-muted">Organizer: ${r.organizer}</small>
+                </td>
+                <td>${r.room}</td>
+                <td><span class="badge ${(r.status || '').toLowerCase().includes('start') ? 'bg-success' : 'bg-secondary'
                     }">${r.status || ''}</span></td>
-            <td><a class="btn btn-sm btn-primary" href="active-meeting.html?id=${encodeURIComponent(r.id)}">Open</a></td>
-          </tr>
-        `).join('');
+                <td><a class="btn btn-sm btn-primary" href="active-meeting.html?id=${encodeURIComponent(r.id)}">Open</a></td>
+              </tr>
+            `).join('');
             } catch (err) {
                 console.error(err);
                 if ($searchError) $searchError.textContent = 'Search failed.';

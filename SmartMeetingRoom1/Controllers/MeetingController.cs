@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartMeetingRoom1.Dtos;
 using SmartMeetingRoom1.Interfaces;
 using SmartMeetingRoom1.Models; // AppDbContext
+using System.Data;
 using System.Security.Claims;
 
 [ApiController]
@@ -29,6 +30,45 @@ public class MeetingsController : ControllerBase
         _attendeeService = attendeeService;
     }
 
+    // ===== helpers (conflict guard) =====
+    private static (DateTime startUtc, DateTime endUtc, int roomId) ExtractRangeForCreate(CreateMeetingDto dto)
+    {
+        // Normalize to UTC to avoid TZ inconsistencies
+        var start = DateTime.SpecifyKind(dto.StartTime, DateTimeKind.Utc);
+        var end = dto.EndTime != default
+            ? DateTime.SpecifyKind(dto.EndTime, DateTimeKind.Utc)
+            : start.AddMinutes(dto.DurationMinutes);
+        return (start, end, dto.RoomId);
+    }
+
+    private static (DateTime startUtc, DateTime endUtc, int roomId) ExtractRangeForUpdate(UpdateMeetingDto dto, Meeting current)
+    {
+        // Use incoming values if provided, otherwise keep existing
+        var start = dto.StartTime != default
+            ? DateTime.SpecifyKind(dto.StartTime, DateTimeKind.Utc)
+            : current.StartTime;
+
+        var end = dto.EndTime != default
+            ? DateTime.SpecifyKind(dto.EndTime, DateTimeKind.Utc)
+            : (dto.DurationMinutes > 0 ? start.AddMinutes(dto.DurationMinutes) : current.EndTime);
+
+        var roomId = dto.RoomId > 0 ? dto.RoomId : current.RoomId;
+        return (start, end, roomId);
+    }
+
+    private Task<bool> HasRoomConflictAsync(int roomId, DateTime startUtc, DateTime endUtc, int? excludeMeetingId = null)
+    {
+        // If you use statuses like "Cancelled", exclude them here.
+        var activeStatuses = new[] { "Scheduled", "Started" };
+
+        return _db.Meetings.AsNoTracking().AnyAsync(m =>
+            (excludeMeetingId == null || m.Id != excludeMeetingId.Value) &&
+            m.RoomId == roomId &&
+            activeStatuses.Contains(m.Status) &&
+            m.StartTime < endUtc &&          // overlap rule
+            m.EndTime > startUtc);
+    }
+
     // ===== Basic CRUD =====
 
     [HttpGet("{id:int}")]
@@ -45,10 +85,18 @@ public class MeetingsController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        // Organizer comes from JWT
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
         dto.OrganizerId = int.Parse(userIdStr);
+
+        // ---- double-booking guard ----
+        var (startUtc, endUtc, roomId) = ExtractRangeForCreate(dto);
+        if (endUtc <= startUtc) return BadRequest("End time must be after start time.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        if (await HasRoomConflictAsync(roomId, startUtc, endUtc))
+            return Conflict(new { message = "That room is already booked during the selected time." });
 
         try
         {
@@ -75,9 +123,14 @@ public class MeetingsController : ControllerBase
                 }
             }
 
+            await tx.CommitAsync();
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
-        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        catch (ArgumentException ex)
+        {
+            await tx.RollbackAsync();
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{id:int}")]
@@ -86,12 +139,35 @@ public class MeetingsController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
+        // Need current record to compute defaults/exclusions for guard
+        var current = await _db.Meetings.FindAsync(id);
+        if (current is null) return NotFound();
+
+        var (startUtc, endUtc, roomId) = ExtractRangeForUpdate(dto, current);
+        if (endUtc <= startUtc) return BadRequest("End time must be after start time.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        if (await HasRoomConflictAsync(roomId, startUtc, endUtc, excludeMeetingId: id))
+            return Conflict(new { message = "That room is already booked during the selected time." });
+
         try
         {
             var ok = await _service.UpdateAsync(id, dto);
-            return ok ? NoContent() : NotFound();
+            if (!ok)
+            {
+                await tx.RollbackAsync();
+                return NotFound();
+            }
+
+            await tx.CommitAsync();
+            return NoContent();
         }
-        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        catch (ArgumentException ex)
+        {
+            await tx.RollbackAsync();
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpDelete("{id:int}")]
@@ -105,7 +181,7 @@ public class MeetingsController : ControllerBase
     // ===== Availability =====
     // GET /api/meetings/availability?fromUtc=...&toUtc=...&roomId=3
     [HttpGet("availability")]
-    [AllowAnonymous] // keep as in your version (remove if you require auth)
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<RoomAvailabilityDto>>> Availability(
         [FromQuery] DateTime fromUtc,
         [FromQuery] DateTime toUtc,
@@ -117,7 +193,6 @@ public class MeetingsController : ControllerBase
         if (roomId.HasValue) roomsQuery = roomsQuery.Where(r => r.Id == roomId.Value);
         var rooms = await roomsQuery.ToListAsync();
 
-        // overlap: start < to && end > from
         var overlappingRoomIds = await _db.Meetings
             .AsNoTracking()
             .Where(m =>
@@ -196,7 +271,6 @@ public class MeetingsController : ControllerBase
     // ===== Agenda (get / patch) =====
     public record UpdateAgendaDto(string? Agenda);
 
-    // GET /api/meetings/{id}/agenda
     [HttpGet("{id:int}/agenda")]
     public async Task<IActionResult> GetAgenda(int id)
     {
@@ -205,7 +279,6 @@ public class MeetingsController : ControllerBase
         return Ok(new { agenda = m.Agenda ?? "" });
     }
 
-    // PATCH /api/meetings/{id}/agenda
     [HttpPatch("{id:int}/agenda")]
     public async Task<IActionResult> UpdateAgenda(int id, [FromBody] UpdateAgendaDto dto)
     {
@@ -216,13 +289,13 @@ public class MeetingsController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();
     }
+
     // GET: /api/meetings/upcoming?days=7&take=5
     [HttpGet("upcoming")]
     public async Task<ActionResult<IEnumerable<MeetingListItemDto>>> Upcoming(
         [FromQuery] int days = 7,
         [FromQuery] int take = 5)
     {
-        // who am I?
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(userIdStr, out var userId)) return Unauthorized();
 
@@ -236,7 +309,6 @@ public class MeetingsController : ControllerBase
             .Include(m => m.Organizer)
             .Where(m =>
                 m.StartTime >= now && m.StartTime <= to &&
-                // organizer or invited attendee
                 (m.OrganizerId == userId ||
                  _db.MeetingAttendees.Any(a => a.MeetingId == m.Id && a.UserId == userId)))
             .OrderBy(m => m.StartTime)
@@ -295,21 +367,52 @@ public class MeetingsController : ControllerBase
                   user => user.Id,
                   (attendee, user) => new AttendeeDto(
                       attendee.UserId,
-                      user.Email, // show email as name (as in your code)
+                      user.Email,
                       attendee.UserId == meeting.OrganizerId))
             .ToListAsync();
 
         return Ok(rows);
     }
+    // GET /api/meetings/calendar?fromUtc=2025-09-01T00:00:00Z&toUtc=2025-09-30T00:00:00Z&roomId=3
+    [HttpGet("calendar")]
+    public async Task<ActionResult<IEnumerable<CalendarEventDto>>> Calendar(
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        [FromQuery] int? roomId = null)
+    {
+        var to = (toUtc ?? DateTime.UtcNow.AddDays(30));
+        var from = (fromUtc ?? DateTime.UtcNow.AddDays(-1));
+        if (to <= from) return BadRequest("toUtc must be after fromUtc.");
 
-    // ===== Optional no-ops kept from your version =====
+        var q = _db.Meetings.AsNoTracking()
+            .Include(m => m.Room)
+            .Where(m => m.StartTime < to && m.EndTime > from);
+
+        if (roomId.HasValue) q = q.Where(m => m.RoomId == roomId.Value);
+
+        var rows = await q
+            .OrderBy(m => m.StartTime)
+            .Select(m => new CalendarEventDto
+            {
+                Id = m.Id,
+                Title = m.Title,
+                RoomId = m.RoomId,
+                Room = m.Room.Name,
+                Start = m.StartTime,
+                End = m.EndTime,
+                Status = m.Status
+            })
+            .ToListAsync();
+
+        return Ok(rows);
+    }
+
+    // ===== Optional no-ops =====
     public record ToggleDto(bool Enabled);
-
     [HttpPost("{id:int}/transcription")]
     public IActionResult Transcription(int id, [FromBody] ToggleDto dto) => NoContent();
 
     public record InviteDto(List<string> Emails);
-
     [HttpPost("{id:int}/invite")]
     public IActionResult Invite(int id, [FromBody] InviteDto dto) => NoContent();
 }
