@@ -649,44 +649,48 @@
                 }
                 empty.classList.add('d-none');
 
-                const labels = points.map(p => p.room ?? p.roomName ?? `Room ${p.roomId}`);
-                const data = points.map(p => Number(p.hoursBooked ?? p.hours ?? 0));
+                // Normalize -> { room, minutes }
+                const norm = points.map(p => ({
+                    room: p.room ?? p.roomName ?? `Room ${p.roomId ?? ''}`.trim(),
+                    minutes: Number(p.minutes ?? p.Minutes ?? p.totalMinutes ?? 0)
+                }));
+
+                // Aggregate total minutes by room for the selected window
+                const byRoom = new Map();
+                for (const { room, minutes } of norm) {
+                    byRoom.set(room, (byRoom.get(room) || 0) + (minutes || 0));
+                }
+
+                // Build chart series in HOURS
+                const labels = [...byRoom.keys()];
+                const data = [...byRoom.values()].map(min => +(min / 60).toFixed(2));
 
                 if (ruChart) ruChart.destroy();
                 ruChart = new Chart(cvs, {
                     type: 'bar',
                     data: {
                         labels,
-                        datasets: [{
-                            label: 'Hours booked',
-                            data
-                        }]
+                        datasets: [{ label: 'Hours booked', data }]
                     },
                     options: {
                         responsive: true,
                         plugins: {
                             legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: ctx => `${ctx.parsed.y.toFixed(1)} h`
-                                }
-                            }
+                            tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(2)} h` } }
                         },
                         scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: 'Hours' }
-                            },
+                            y: { beginAtZero: true, title: { display: true, text: 'Hours' } },
                             x: { title: { display: true, text: 'Room' } }
                         }
                     }
                 });
             } catch (e) {
                 if (ruChart) { ruChart.destroy(); ruChart = null; }
-                document.getElementById('ruEmpty').classList.add('d-none');
+                empty.classList.add('d-none');
                 err.textContent = e.message || 'Failed to load room usage.';
             }
         }
+
 
         // ---------- init ----------
         document.addEventListener('DOMContentLoaded', async () => {

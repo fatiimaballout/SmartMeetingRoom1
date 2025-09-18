@@ -317,17 +317,17 @@
                     const status = (r.status || '').toLowerCase();
                     const badge = status === 'free' ? 'bg-success' : 'bg-danger';
                     return `<tr>
-                            <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
-                            <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
-                            <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
-                        </tr>`;
+                                <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
+                                <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
+                                <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
+                            </tr>`;
                 }).join('');
             } catch (err) {
                 console.error(err);
                 body.innerHTML = '<tr><td colspan="3" class="text-danger">Failed to load availability.</td></tr>';
             }
         }
-        
+
         /* ===== Agenda (SIMPLE ITEMS) ===== */
         const agenda = []; // array of strings
 
@@ -342,13 +342,13 @@
                 list.innerHTML = '<li class="list-group-item text-muted">No items yet.</li>';
             } else {
                 list.innerHTML = agenda.map((t, i) => `
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>${escapeHtml(t)}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}" title="Remove">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </li>
-                    `).join('');
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>${escapeHtml(t)}</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}" title="Remove">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </li>
+                        `).join('');
                 list.querySelectorAll('[data-remove]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         agenda.splice(parseInt(btn.dataset.remove, 10), 1);

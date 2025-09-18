@@ -8,7 +8,8 @@
         public DateTime EndTime { get; set; }
         public string Status { get; set; } = "";
         public string Title { get; set; } = "";
-        public string Agenda { get; set; } = "";
+        public string? Agenda { get; set; } 
+        public int DurationMinutes { get; set; }
         public List<string>? Attendees { get; set; }
     }
 }

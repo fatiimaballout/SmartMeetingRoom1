@@ -43,43 +43,36 @@ namespace SmartMeetingRoom1.Services
 
         public async Task<MeetingDto> CreateAsync(CreateMeetingDto dto)
         {
-            // validate organizer
-            var organizer = await _userManager.FindByIdAsync(dto.OrganizerId.ToString());
-            if (organizer == null)
-                throw new ArgumentException($"Organizer {dto.OrganizerId} does not exist.");
+            // compute end time
+            var end = dto.StartTime.AddMinutes(dto.DurationMinutes);
 
-            // validate room
-            var room = await _db.Rooms.FindAsync(dto.RoomId);
-            if (room == null)
-                throw new ArgumentException("Room not found.");
-
-            var meeting = new Meeting
+            var entity = new Meeting
             {
-                Title = dto.Title ?? string.Empty,            // <-- ensure not null
-                Agenda = dto.Agenda ?? string.Empty,           // <-- ensure not null
-                Status = string.IsNullOrWhiteSpace(dto.Status) // optional: let DTO override
-                                ? "Scheduled" : dto.Status,
+                Title = dto.Title,
                 RoomId = dto.RoomId,
-                OrganizerId = organizer.Id,
-                StartTime = dto.StartTime.ToUniversalTime(),
-                EndTime = dto.EndTime.ToUniversalTime()
+                StartTime = dto.StartTime,
+                EndTime = end,
+                OrganizerId = dto.OrganizerId,
+                Status = "Scheduled",
+                Agenda = dto.Agenda ?? ""   // <-- PERSIST IT HERE
             };
 
-            _db.Meetings.Add(meeting);
+            _db.Meetings.Add(entity);
             await _db.SaveChangesAsync();
 
+            // map back to DTO (RoomName optional)
             return new MeetingDto
             {
-                Id = meeting.Id,
-                Title = meeting.Title,
-                Agenda = meeting.Agenda,
-                Status = meeting.Status,
-                RoomId = meeting.RoomId,
-                OrganizerId = meeting.OrganizerId,
-                StartTime = meeting.StartTime,
-                EndTime = meeting.EndTime,
+                Id = entity.Id,
+                Title = entity.Title,
+                StartTime = entity.StartTime,
+                EndTime = entity.EndTime,
+                Status = entity.Status,
+                RoomId = entity.RoomId,
+                Agenda = entity.Agenda
             };
         }
+
         private static MinuteDto Map(Minute m) => new()
         {
             Id = m.Id,
