@@ -183,207 +183,142 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // ===== helpers =====
-    const getToken = () =>
-      localStorage.getItem('smr_access_token') ||
-      sessionStorage.getItem('smr_access_token') || '';
+        const token = () =>
+            localStorage.getItem('smr_access_token') ||
+            sessionStorage.getItem('smr_access_token') || '';
 
-    async function authedFetch(url, options = {}) {
-      const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-      const t = getToken();
-      if (t) headers['Authorization'] = 'Bearer ' + t;
-      return fetch(url, { ...options, headers });
-    }
-
-    function toastOk(msg) {
-      document.getElementById('okToastBody').textContent = msg || 'Saved.';
-      new bootstrap.Toast(document.getElementById('okToast')).show();
-    }
-
-    // ===== page state =====
-    let ME = null;
-
-    // ===== API wrappers with graceful fallbacks =====
-    async function getMe() {
-      const r = await authedFetch('/api/auth/me');
-      if (!r.ok) throw new Error(await r.text());
-      return r.json();
-    }
-
-    async function updateMyProfile({ fullName, email }) {
-      // try /api/users/me first
-      let r = await authedFetch('/api/users/me', {
-        method: 'PUT',
-        body: JSON.stringify({ fullName, email })
-      });
-      if (r.ok || r.status === 204) return true;
-
-      // fallback to employees controller (if present)
-      if (ME?.id != null) {
-        r = await authedFetch(`/api/users/employees/${ME.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({ fullName, email })
-        });
-        if (r.ok || r.status === 204) return true;
-      }
-      throw new Error(await r.text());
-    }
-
-    async function changeMyPassword({ currentPassword, newPassword }) {
-      // preferred
-      let r = await authedFetch('/api/users/me/password', {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword, newPassword })
-      });
-      if (r.ok || r.status === 204) return true;
-
-      // fallback employees endpoint
-      if (ME?.id != null) {
-        r = await authedFetch(`/api/users/employees/${ME.id}/password`, {
-          method: 'POST',
-          body: JSON.stringify({ currentPassword, newPassword })
-        });
-        if (r.ok || r.status === 204) return true;
-      }
-
-      // generic auth endpoint (if you added it)
-      r = await authedFetch('/api/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword, newPassword })
-      });
-      if (r.ok || r.status === 204) return true;
-
-      throw new Error(await r.text());
-    }
-
-    async function uploadMyAvatar(file) {
-      const form = new FormData();
-      form.append('file', file);
-      const t = getToken();
-
-      // /api/users/me/avatar
-      let r = await fetch('/api/users/me/avatar', {
-        method: 'POST',
-        headers: t ? { 'Authorization': 'Bearer ' + t } : undefined,
-        body: form
-      });
-      if (r.ok) return true;
-
-      // fallback /employees/{id}/avatar
-      if (ME?.id != null) {
-        r = await fetch(`/api/users/employees/${ME.id}/avatar`, {
-          method: 'POST',
-          headers: t ? { 'Authorization': 'Bearer ' + t } : undefined,
-          body: form
-        });
-        if (r.ok) return true;
-      }
-      throw new Error(await r.text());
-    }
-
-    // ===== UI logic =====
-    function fillRolesBadges(roles) {
-      const wrap = document.getElementById('rolesWrap');
-      if (!Array.isArray(roles) || roles.length === 0) {
-        wrap.innerHTML = '<span class="text-muted">None</span>'; return;
-      }
-      wrap.innerHTML = roles.map(r => `<span class="badge bg-secondary">${r}</span>`).join(' ');
-    }
-
-    async function loadProfile() {
-      try {
-        ME = await getMe();
-        // name/email/username
-        document.getElementById('fullName').value = ME.fullName ?? ME.FullName ?? '';
-        document.getElementById('userName').value = ME.userName ?? ME.UserName ?? '';
-        document.getElementById('email').value    = ME.email ?? ME.Email ?? '';
-
-        // nav + meta
-        document.getElementById('navUserName').textContent = ME.userName ?? ME.UserName ?? 'User';
-        document.getElementById('metaUserId').textContent = ME.id ?? ME.Id ?? '—';
-        document.getElementById('metaEmail').textContent  = ME.email ?? ME.Email ?? '—';
-        document.getElementById('metaCreated').textContent = ME.createdAt ? new Date(ME.createdAt).toLocaleString() : '—';
-        document.getElementById('metaLastLogin').textContent = ME.lastLoginUtc ? new Date(ME.lastLoginUtc).toLocaleString() : '—';
-
-        fillRolesBadges(ME.roles ?? ME.Roles ?? []);
-
-        // optional avatar url field (if your API returns one)
-        if (ME.avatarUrl) {
-          document.getElementById('avatarPreview').src = ME.avatarUrl;
-          document.getElementById('navAvatar').src = ME.avatarUrl;
+        async function authedFetch(url, opts = {}) {
+            return fetch(url, {
+                ...opts,
+                headers: { 'Authorization': 'Bearer ' + token(), ...(opts.headers || {}) }
+            });
         }
-      } catch (err) {
-        console.error(err);
-        location.href = '/login.html';
-      }
-    }
 
-    async function onSaveProfile() {
-      document.getElementById('profileError').textContent = '';
-      try {
-        await updateMyProfile({
-          fullName: document.getElementById('fullName').value.trim(),
-          email: document.getElementById('email').value.trim()
+        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+        const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? ''; };
+        const setHtml = (id, v) => { const el = document.getElementById(id); if (el) el.innerHTML = v ?? ''; };
+
+        async function loadProfile() {
+            const r = await authedFetch('/api/profile');
+            if (!r.ok) { setText('profileError', 'Failed to load profile.'); return; }
+            const me = await r.json();
+
+            // top nav (optional)
+            document.getElementById('navUserName').textContent = me.fullName || me.userName || 'Profile';
+            if (me.avatarUrl) document.getElementById('navAvatar').src = me.avatarUrl;
+
+            // form fields
+            setVal('fullName', me.fullName ?? '');
+            setVal('email', me.email ?? '');
+            setVal('userName', me.userName ?? '');
+
+            // roles
+            document.getElementById('rolesWrap').innerHTML =
+                (me.roles || []).map(r => `<span class="badge bg-secondary me-1">${r}</span>`).join('') ||
+                '<span class="text-muted">None</span>';
+
+            // avatar + meta
+            document.getElementById('avatarPreview').src = me.avatarUrl || '/assets/img/profile-img.jpg';
+            setText('metaUserId', me.id ?? '—');
+            setText('metaEmail', me.email ?? '—');
+            setText('metaCreated', me.createdUtc ? new Date(me.createdUtc).toLocaleString() : '—');
+            setText('metaLastLogin', me.lastLoginUtc ? new Date(me.lastLoginUtc).toLocaleString() : '—');
+        }
+
+        async function onSaveProfile() {
+            setText('profileError', '');
+            const body = {
+                fullName: document.getElementById('fullName').value.trim(),
+                email: document.getElementById('email').value.trim()
+            };
+
+            const r = await authedFetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (r.status === 204 || r.ok) {
+                setText('profileError', '');
+                showOk('Saved.');
+                await loadProfile();
+            } else {
+                setText('profileError', (await r.text()) || 'Save failed.');
+            }
+        }
+
+        async function onChangePassword() {
+            setText('pwdError', '');
+            const currentPassword = document.getElementById('pwdCurrent').value;
+            const new1 = document.getElementById('pwdNew').value;
+            const new2 = document.getElementById('pwdConfirm').value;
+
+            if (!currentPassword || !new1 || !new2) {
+                setText('pwdError', 'Fill all fields.'); return;
+            }
+            if (new1 !== new2) {
+                setText('pwdError', 'New passwords do not match.'); return;
+            }
+
+            const r = await authedFetch('/api/profile/password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword: new1 })
+            });
+
+            if (r.status === 204 || r.ok) {
+                setText('pwdError', '');
+                showOk('Password updated.');
+                document.getElementById('pwdCurrent').value = '';
+                document.getElementById('pwdNew').value = '';
+                document.getElementById('pwdConfirm').value = '';
+            } else {
+                setText('pwdError', (await r.text()) || 'Update failed.');
+            }
+        }
+
+        async function onUploadAvatar() {
+            setText('avatarError', '');
+            const f = document.getElementById('avatarInput').files[0];
+            if (!f) { setText('avatarError', 'Choose a file.'); return; }
+
+            const fd = new FormData(); fd.append('file', f);
+            const r = await authedFetch('/api/profile/avatar', { method: 'POST', body: fd });
+
+            if (!r.ok) {
+                setText('avatarError', (await r.text()) || 'Upload failed.');
+                return;
+            }
+
+            const { url } = await r.json();
+            document.getElementById('avatarPreview').src = url;
+            document.getElementById('navAvatar').src = url;
+            showOk('Avatar uploaded.');
+        }
+
+        // small toast helper
+        function showOk(msg) {
+            const el = document.getElementById('okToast');
+            document.getElementById('okToastBody').textContent = msg || 'Done.';
+            new bootstrap.Toast(el).show();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('btnSaveProfile').addEventListener('click', onSaveProfile);
+            document.getElementById('btnChangePwd').addEventListener('click', onChangePassword);
+            document.getElementById('btnUploadAvatar').addEventListener('click', onUploadAvatar);
+
+            document.getElementById('btnSignOut')?.addEventListener('click', e => {
+                e.preventDefault();
+                localStorage.removeItem('smr_access_token');
+                sessionStorage.removeItem('smr_access_token');
+                location.href = '/login.html';
+            });
+
+            await loadProfile();
         });
-        toastOk('Profile saved.');
-        await loadProfile();
-      } catch (err) {
-        document.getElementById('profileError').textContent = err.message || 'Save failed.';
-      }
-    }
-
-    async function onChangePassword() {
-      const cur = document.getElementById('pwdCurrent').value;
-      const npw = document.getElementById('pwdNew').value;
-      const cfm = document.getElementById('pwdConfirm').value;
-      const err = document.getElementById('pwdError');
-      err.textContent = '';
-
-      if (!npw || npw !== cfm) { err.textContent = 'Passwords do not match.'; return; }
-      try {
-        await changeMyPassword({ currentPassword: cur, newPassword: npw });
-        document.getElementById('pwdCurrent').value = '';
-        document.getElementById('pwdNew').value = '';
-        document.getElementById('pwdConfirm').value = '';
-        toastOk('Password updated.');
-      } catch (e) {
-        err.textContent = e.message || 'Update failed.';
-      }
-    }
-
-    async function onUploadAvatar() {
-      const file = document.getElementById('avatarInput').files?.[0];
-      const err = document.getElementById('avatarError');
-      err.textContent = '';
-      if (!file) { err.textContent = 'Choose an image.'; return; }
-      try {
-        await uploadMyAvatar(file);
-        // show preview immediately
-        const url = URL.createObjectURL(file);
-        document.getElementById('avatarPreview').src = url;
-        document.getElementById('navAvatar').src = url;
-        toastOk('Photo uploaded.');
-      } catch (e) {
-        err.textContent = 'Avatar upload API not available.';
-      }
-    }
-
-    // ===== init =====
-    document.addEventListener('DOMContentLoaded', async () => {
-      // sign out
-      document.getElementById('btnSignOut')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        localStorage.removeItem('smr_access_token');
-        sessionStorage.removeItem('smr_access_token');
-        location.href = '/login.html';
-      });
-
-      document.getElementById('btnSaveProfile').addEventListener('click', onSaveProfile);
-      document.getElementById('btnChangePwd').addEventListener('click', onChangePassword);
-      document.getElementById('btnUploadAvatar').addEventListener('click', onUploadAvatar);
-
-      await loadProfile();
-    });
     </script>
+
+
 </body>
 </html>
