@@ -11,5 +11,6 @@
         public string? Agenda { get; set; } 
         public int DurationMinutes { get; set; }
         public List<string>? Attendees { get; set; }
+        public List<int>? AttendeeIds { get; set; }
     }
 }

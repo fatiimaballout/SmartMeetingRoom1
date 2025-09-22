@@ -7,4 +7,5 @@
     public DateTime Start { get; set; }   // UTC
     public DateTime End { get; set; }     // UTC
     public string Status { get; set; } = "";
+    public int OrganizerId { get; set; }
 }

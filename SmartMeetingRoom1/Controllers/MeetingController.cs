@@ -31,6 +31,13 @@ public class MeetingsController : ControllerBase
     }
 
     // ===== helpers (conflict guard) =====
+    private static DateTime AsUtc(DateTime dt)
+    {
+        // Treat Unspecified as UTC (client sends ISO-UTC); preserve if already Utc
+        return dt.Kind == DateTimeKind.Utc ? dt
+             : dt.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+             : dt.ToUniversalTime();
+    }
     private static (DateTime startUtc, DateTime endUtc, int roomId) ExtractRangeForCreate(CreateMeetingDto dto)
     {
         // Normalize to UTC to avoid TZ inconsistencies
@@ -85,11 +92,12 @@ public class MeetingsController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
+        // Organizer from JWT
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
         dto.OrganizerId = int.Parse(userIdStr);
 
-        // ---- double-booking guard ----
+        // Double-booking guard
         var (startUtc, endUtc, roomId) = ExtractRangeForCreate(dto);
         if (endUtc <= startUtc) return BadRequest("End time must be after start time.");
 
@@ -100,30 +108,66 @@ public class MeetingsController : ControllerBase
 
         try
         {
-            var created = await _service.CreateAsync(dto);
+            var created = await _service.CreateAsync(dto); // your service persists Meeting
 
-            // Add attendees by email (if provided)
-            if (dto.Attendees != null)
+            // ----- Attendees -----
+            // 1) Internal users by ID (preferred)
+            if (dto.AttendeeIds is { Count: > 0 })
             {
-                foreach (var email in dto.Attendees)
+                foreach (var uid in dto.AttendeeIds.Distinct())
                 {
-                    var attendeeDto = new CreateMeetingAttendeeDto
+                    var exists = await _db.MeetingAttendees
+                        .AnyAsync(a => a.MeetingId == created.Id && a.UserId == uid);
+                    if (!exists)
                     {
-                        MeetingId = created.Id,
-                        UserEmail = email,
-                        Status = "invited"
-                    };
-
-                    try { await _attendeeService.CreateAsync(attendeeDto); }
-                    catch (ArgumentException ex)
-                    {
-                        // Non-fatal: keep creating the meeting even if one attendee fails
-                        Console.WriteLine($"Failed to add attendee {email}: {ex.Message}");
+                        _db.MeetingAttendees.Add(new MeetingAttendee
+                        {
+                            MeetingId = created.Id,
+                            UserId = uid,
+                            Status = "invited",
+                            CreatedAt = DateTime.UtcNow
+                        });
                     }
                 }
             }
 
+            // 2) Fallback: resolve emails to users and add by UserId
+            if (dto.Attendees is { Count: > 0 })
+            {
+                var emails = dto.Attendees
+                    .Select(e => (e ?? "").Trim().ToLower())
+                    .Where(e => e.Contains('@'))
+                    .Distinct()
+                    .ToList();
+
+                if (emails.Count > 0)
+                {
+                    var users = await _db.Users
+                        .Where(u => emails.Contains(u.Email!.ToLower()))
+                        .Select(u => new { u.Id })
+                        .ToListAsync();
+
+                    foreach (var u in users)
+                    {
+                        var exists = await _db.MeetingAttendees
+                            .AnyAsync(a => a.MeetingId == created.Id && a.UserId == u.Id);
+                        if (!exists)
+                        {
+                            _db.MeetingAttendees.Add(new MeetingAttendee
+                            {
+                                MeetingId = created.Id,
+                                UserId = u.Id,
+                                Status = "invited",
+                                CreatedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+            }
+
+            await _db.SaveChangesAsync();
             await tx.CommitAsync();
+
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ArgumentException ex)
@@ -139,7 +183,6 @@ public class MeetingsController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        // Need current record to compute defaults/exclusions for guard
         var current = await _db.Meetings.FindAsync(id);
         if (current is null) return NotFound();
 
@@ -160,6 +203,62 @@ public class MeetingsController : ControllerBase
                 return NotFound();
             }
 
+            // ----- Attendees upsert (only if caller provided lists) -----
+            // IDs first
+            if (dto.AttendeeIds is { Count: > 0 })
+            {
+                foreach (var uid in dto.AttendeeIds.Distinct())
+                {
+                    var exists = await _db.MeetingAttendees
+                        .AnyAsync(a => a.MeetingId == id && a.UserId == uid);
+                    if (!exists)
+                    {
+                        _db.MeetingAttendees.Add(new MeetingAttendee
+                        {
+                            MeetingId = id,
+                            UserId = uid,
+                            Status = "invited",
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
+            // Emails (resolve → users) if provided
+            if (dto.Attendees is { Count: > 0 })
+            {
+                var emails = dto.Attendees
+                    .Select(e => (e ?? "").Trim().ToLower())
+                    .Where(e => e.Contains('@'))
+                    .Distinct()
+                    .ToList();
+
+                if (emails.Count > 0)
+                {
+                    var users = await _db.Users
+                        .Where(u => emails.Contains(u.Email!.ToLower()))
+                        .Select(u => new { u.Id })
+                        .ToListAsync();
+
+                    foreach (var u in users)
+                    {
+                        var exists = await _db.MeetingAttendees
+                            .AnyAsync(a => a.MeetingId == id && a.UserId == u.Id);
+                        if (!exists)
+                        {
+                            _db.MeetingAttendees.Add(new MeetingAttendee
+                            {
+                                MeetingId = id,
+                                UserId = u.Id,
+                                Status = "invited",
+                                CreatedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+            }
+
+            await _db.SaveChangesAsync();
             await tx.CommitAsync();
             return NoContent();
         }
@@ -378,7 +477,9 @@ public class MeetingsController : ControllerBase
     public async Task<ActionResult<IEnumerable<CalendarEventDto>>> Calendar(
         [FromQuery] DateTime? fromUtc,
         [FromQuery] DateTime? toUtc,
-        [FromQuery] int? roomId = null)
+        [FromQuery] int? roomId = null,
+        [FromQuery] int? organizerId = null)
+
     {
         var to = (toUtc ?? DateTime.UtcNow.AddDays(30));
         var from = (fromUtc ?? DateTime.UtcNow.AddDays(-1));
@@ -389,6 +490,7 @@ public class MeetingsController : ControllerBase
             .Where(m => m.StartTime < to && m.EndTime > from);
 
         if (roomId.HasValue) q = q.Where(m => m.RoomId == roomId.Value);
+        if (organizerId.HasValue) q = q.Where(m => m.OrganizerId == organizerId.Value);
 
         var rows = await q
             .OrderBy(m => m.StartTime)
@@ -405,6 +507,34 @@ public class MeetingsController : ControllerBase
             .ToListAsync();
 
         return Ok(rows);
+    }
+    // GET /api/meetings/organizers?fromUtc=...&toUtc=...&roomId=3
+    [HttpGet("organizers")]
+    public async Task<IActionResult> DistinctOrganizers(
+        [FromQuery] DateTime fromUtc,
+        [FromQuery] DateTime toUtc,
+        [FromQuery] int? roomId = null)
+    {
+        if (toUtc <= fromUtc) return BadRequest("toUtc must be after fromUtc.");
+
+        var q = _db.Meetings
+            .AsNoTracking()
+            .Include(m => m.Organizer)
+            .Where(m => m.StartTime < toUtc && m.EndTime > fromUtc);
+
+        if (roomId.HasValue) q = q.Where(m => m.RoomId == roomId.Value);
+
+        var rows = await q
+            .Select(m => new {
+                m.OrganizerId,
+                Name = m.Organizer.FullName ?? m.Organizer.UserName ?? m.Organizer.Email
+            })
+            .Distinct()
+            .OrderBy(x => x.Name)
+            .ToListAsync();
+
+        // normalize shape for the UI
+        return Ok(rows.Select(x => new { id = x.OrganizerId, name = x.Name }));
     }
 
     // ===== Optional no-ops =====

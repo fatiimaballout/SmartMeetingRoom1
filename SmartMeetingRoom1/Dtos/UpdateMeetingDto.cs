@@ -10,5 +10,7 @@
         public string Title { get; set; } = "";
         public string Agenda { get; set; } = "";
         public int DurationMinutes { get; set; }
+        public List<int>? AttendeeIds { get; set; }
+        public List<string>? Attendees { get; set; }
     }
 }

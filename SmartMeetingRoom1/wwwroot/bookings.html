@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Bookings – SmartMeet</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
     <link href="/css/style.css" rel="stylesheet" />
@@ -95,6 +96,14 @@
                                 <option value="">All rooms</option>
                             </select>
                         </div>
+                        <!-- Organizer filter (dynamic by range/room) -->
+                        <div class="col-sm-4 col-md-3">
+                            <label class="form-label" for="orgFilter">Organizer</label>
+                            <select id="orgFilter" class="form-select">
+                                <option value="">All organizers</option>
+                            </select>
+                        </div>
+
                         <div class="col-sm-6 col-md-3 d-flex align-items-end gap-2">
                             <button class="btn btn-outline-primary w-100" id="btnRefresh"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
                             <button class="btn btn-success w-100" id="btnNew"><i class="bi bi-plus-circle me-1"></i>New</button>
@@ -137,7 +146,9 @@
         </section>
     </main>
 
-    <footer id="footer" class="footer"><div class="copyright">&copy; <strong><span>SmartMeet</span></strong>. All Rights Reserved</div></footer>
+    <footer id="footer" class="footer">
+        <div class="copyright">&copy; <strong><span>SmartMeet</span></strong>. All Rights Reserved</div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -160,16 +171,51 @@
             });
         }
 
-        // Calendar + list load
-        function buildRangeQS() {
+        // ----- Organizer list is computed from existing meetings in range (+ optional room) -----
+        function getRangeIso() {
             const from = new Date(document.getElementById('fromDate').value);
             const to = new Date(document.getElementById('toDate').value);
-            const roomId = document.getElementById('roomFilter').value;
-            const qs = new URLSearchParams({
-                fromUtc: new Date(from.setHours(0, 0, 0, 0)).toISOString(),
-                toUtc: new Date(to.setHours(23, 59, 59, 999)).toISOString()
-            });
+            return {
+                fromIso: new Date(from.setHours(0, 0, 0, 0)).toISOString(),
+                toIso: new Date(to.setHours(23, 59, 59, 999)).toISOString()
+            };
+        }
+
+        async function loadOrganizersIntoFilter() {
+            const sel = document.getElementById('orgFilter');
+            const roomId = document.getElementById('roomFilter').value || '';
+            const current = sel.value; // try to preserve selection if still valid
+            sel.innerHTML = '<option value="">All organizers</option>';
+
+            const { fromIso, toIso } = getRangeIso();
+            const qs = new URLSearchParams({ fromUtc: fromIso, toUtc: toIso });
             if (roomId) qs.set('roomId', roomId);
+
+            try {
+                const r = await authedFetch('/api/meetings/organizers?' + qs.toString());
+                if (!r.ok) throw new Error(await r.text());
+                const users = await r.json(); // [{id, name}]
+                users.forEach(u => {
+                    const o = document.createElement('option');
+                    o.value = u.id; o.textContent = u.name || ('User ' + u.id);
+                    sel.appendChild(o);
+                });
+                // restore selection if it still exists
+                if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+            } catch (e) {
+                console.error('Organizer load failed:', e);
+            }
+        }
+
+        // Build query string for calendar feed
+        function buildRangeQS() {
+            const { fromIso, toIso } = getRangeIso();
+            const roomId = document.getElementById('roomFilter').value;
+            const organizerId = document.getElementById('orgFilter').value;
+
+            const qs = new URLSearchParams({ fromUtc: fromIso, toUtc: toIso });
+            if (roomId) qs.set('roomId', roomId);
+            if (organizerId) qs.set('organizerId', organizerId);
             return qs.toString();
         }
 
@@ -186,7 +232,8 @@
             calendar.addEventSource(events.map(e => ({
                 id: String(e.id),
                 title: `${e.title} • ${e.room}`,
-                start: e.start, end: e.end,
+                start: e.start,
+                end: e.end
             })));
 
             // list
@@ -195,27 +242,25 @@
                 tb.innerHTML = '<tr><td colspan="5" class="text-muted">No bookings.</td></tr>';
             } else {
                 tb.innerHTML = events.map(e => `
-          <tr>
-            <td>${new Date(e.start).toLocaleString()} – ${new Date(e.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-            <td>${e.title}</td>
-            <td>${e.room}</td>
-            <td>${e.status ?? ''}</td>
-            <td><a class="btn btn-sm btn-outline-primary" href="booking.html?id=${e.id}"><i class="bi bi-pencil"></i> Edit</a></td>
-          </tr>
-        `).join('');
+                  <tr>
+                    <td>${new Date(e.start).toLocaleString()} – ${new Date(e.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>${e.title}</td>
+                    <td>${e.room}</td>
+                    <td>${e.status ?? ''}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="booking.html?id=${e.id}"><i class="bi bi-pencil"></i> Edit</a></td>
+                  </tr>
+                `).join('');
             }
 
             // note
-            const from = document.getElementById('fromDate').value;
-            const to = document.getElementById('toDate').value;
-            document.getElementById('calRangeNote').textContent = `${from} → ${to}`;
+            document.getElementById('calRangeNote').textContent =
+                `${document.getElementById('fromDate').value} → ${document.getElementById('toDate').value}`;
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // auth quick-guard (optional: redirect to login if token missing)
             if (!token()) { location.href = '/login.html'; return; }
 
-            // date defaults: current week
+            // date defaults: current week-ish
             const now = new Date();
             const start = new Date(now); start.setDate(now.getDate() - 3);
             const end = new Date(now); end.setDate(now.getDate() + 10);
@@ -223,6 +268,7 @@
             document.getElementById('toDate').value = ymd(end);
 
             await loadRoomsIntoFilter();
+            await loadOrganizersIntoFilter(); // initial load based on default range
 
             // calendar init
             const calEl = document.getElementById('calendar');
@@ -239,10 +285,11 @@
             calendar.render();
 
             // wires
-            document.getElementById('btnRefresh').addEventListener('click', refreshData);
-            document.getElementById('roomFilter').addEventListener('change', refreshData);
-            document.getElementById('fromDate').addEventListener('change', refreshData);
-            document.getElementById('toDate').addEventListener('change', refreshData);
+            document.getElementById('btnRefresh').addEventListener('click', () => { refreshData(); });
+            document.getElementById('roomFilter').addEventListener('change', async () => { await loadOrganizersIntoFilter(); refreshData(); });
+            document.getElementById('orgFilter').addEventListener('change', refreshData);
+            document.getElementById('fromDate').addEventListener('change', async () => { await loadOrganizersIntoFilter(); refreshData(); });
+            document.getElementById('toDate').addEventListener('change', async () => { await loadOrganizersIntoFilter(); refreshData(); });
             document.getElementById('btnNew').addEventListener('click', () => location.href = 'booking.html');
 
             await refreshData();
