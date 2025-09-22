@@ -13,7 +13,6 @@
     <link href="/css/style.css" rel="stylesheet" />
     <link href="/css/custom.css" rel="stylesheet" />
 </head>
-
 <body>
     <!-- Header -->
     <header id="header" class="header fixed-top d-flex align-items-center">
@@ -24,7 +23,6 @@
             </a>
             <i class="bi bi-list toggle-sidebar-btn"></i>
         </div>
-
         <nav class="header-nav ms-auto">
             <ul class="d-flex align-items-center">
                 <li class="nav-item dropdown pe-3">
@@ -43,31 +41,11 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
-            <li class="nav-item">
-                <a class="nav-link" href="index.html">
-                    <i class="bi bi-grid"></i><span>Dashboard</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="bookings.html">
-                    <i class="bi bi-calendar3"></i><span>Bookings</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="booking.html">
-                    <i class="bi bi-calendar-plus"></i><span>Book Meeting</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="active-meeting.html">
-                    <i class="bi bi-camera-video"></i><span>Active Meeting</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="minutes.html">
-                    <i class="bi bi-journal-text"></i><span>Minutes</span>
-                </a>
-            </li>
+            <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-grid"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="bookings.html"><i class="bi bi-calendar3"></i><span>Bookings</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="booking.html"><i class="bi bi-calendar-plus"></i><span>Book Meeting</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="active-meeting.html"><i class="bi bi-camera-video"></i><span>Active Meeting</span></a></li>
+            <li class="nav-item"><a class="nav-link collapsed" href="minutes.html"><i class="bi bi-journal-text"></i><span>Minutes</span></a></li>
         </ul>
     </aside>
 
@@ -85,8 +63,9 @@
 
         <section class="section">
             <div class="row">
-                <!-- Form -->
+                <!-- Left column -->
                 <div class="col-lg-8">
+                    <!-- BOOK CARD -->
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title">Meeting Details</h5>
@@ -154,6 +133,119 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- UPDATE/DELETE CARD (with its own form) -->
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Update / Delete Meeting</h5>
+
+                            <!-- Search -->
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label for="udSearchDate" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="udSearchDate" />
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="udSearchText" class="form-label">Title contains</label>
+                                    <input type="text" class="form-control" id="udSearchText" placeholder="Optional filter" />
+                                </div>
+                                <div class="col-md-3 d-grid">
+                                    <label class="form-label invisible">_</label>
+                                    <button id="btnSearchMeetings" class="btn btn-outline-secondary" type="button">
+                                        <i class="bi bi-search me-1"></i>Find
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Title</th>
+                                            <th>Start</th>
+                                            <th>Room</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="udResultsBody">
+                                        <tr><td colspan="5" class="text-muted">Use Find, then click Load…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- UPDATE FORM (hidden until a row is loaded) -->
+                            <div id="udFormWrap" class="mt-3" style="display:none;">
+                                <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3">
+                                    <i class="bi bi-info-circle"></i>
+                                    <div>Loaded: <strong id="udCurrentLabel">—</strong></div>
+                                </div>
+
+                                <form class="row g-3" id="updateForm" novalidate>
+                                    <div class="col-12">
+                                        <label for="udTitle" class="form-label">Meeting Title</label>
+                                        <input type="text" class="form-control" id="udTitle" required />
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="udDate" class="form-label">Date &amp; Time</label>
+                                        <input type="datetime-local" class="form-control" id="udDate" required />
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="udDuration" class="form-label">Duration (minutes)</label>
+                                        <input type="number" class="form-control" id="udDuration" min="15" max="480" required />
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="udRoom" class="form-label">Meeting Room</label>
+                                        <select class="form-select" id="udRoom" required>
+                                            <option value="">Loading rooms…</option>
+                                        </select>
+                                        <div class="invalid-feedback">Please choose a room.</div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="udAttendees" class="form-label">Add Attendees (emails)</label>
+                                        <input type="email" class="form-control" id="udAttendees" placeholder="Enter email and press Enter" />
+                                        <div class="form-text">Press Enter to add each attendee (optional).</div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div id="udAttendeePills" class="d-flex flex-wrap gap-2"></div>
+                                    </div>
+
+                                    <!-- Agenda for Update box -->
+                                    <div class="col-12">
+                                        <label for="udAgendaItem" class="form-label">Agenda – add item</label>
+                                        <div class="input-group">
+                                            <input type="text" id="udAgendaItem" class="form-control" placeholder="e.g., Introductions" />
+                                            <button type="button" class="btn btn-outline-primary" id="btnUdAddAgenda">
+                                                <i class="bi bi-plus-circle me-1"></i>Add
+                                            </button>
+                                        </div>
+                                        <ul class="list-group mt-3" id="udAgendaList">
+                                            <li class="list-group-item text-muted">No items yet.</li>
+                                        </ul>
+                                        <div class="small text-muted mt-2" id="udAgendaCount">Items: 0</div>
+                                    </div>
+
+                                    <div class="col-12 d-flex gap-2">
+                                        <button id="btnUpdateMeeting" class="btn btn-success" type="submit">
+                                            <i class="bi bi-save me-1"></i>Update
+                                        </button>
+                                        <button id="btnDeleteMeeting" class="btn btn-outline-danger" type="button">
+                                            <i class="bi bi-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div id="udError" class="text-danger small"></div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right column -->
@@ -165,11 +257,7 @@
                             <div class="table-responsive mt-2">
                                 <table class="table table-sm">
                                     <thead>
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>Room</th>
-                                            <th>Status</th>
-                                        </tr>
+                                        <tr><th>Time</th><th>Room</th><th>Status</th></tr>
                                     </thead>
                                     <tbody id="availBody">
                                         <tr><td colspan="3" class="text-muted">Pick a date &amp; duration…</td></tr>
@@ -179,7 +267,7 @@
                         </div>
                     </div>
 
-                    <!-- Agenda (SIMPLE ITEMS) -->
+                    <!-- Agenda (SIMPLE ITEMS) for Book form -->
                     <div class="card mt-3">
                         <div class="card-body">
                             <h5 class="card-title">Meeting Agenda</h5>
@@ -212,13 +300,12 @@
 
     <!-- Vendor JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <!-- Your JS bundles -->
     <script src="/js/custom.js"></script>
 
     <!-- Page script -->
     <script>
-        // ---- auth header using the token you already store ----
+        // ==== auth ====
         function getToken() {
             return localStorage.getItem('smr_access_token') || sessionStorage.getItem('smr_access_token') || '';
         }
@@ -229,28 +316,20 @@
             return fetch(url, { ...options, headers });
         }
 
-        // ---- attendees input → chips ----
-        (function wireAttendeeChips() {
-            const input = document.getElementById('meetingAttendees');
-            const pills = document.getElementById('attendeePills');
-
-            function allEmails() {
-                return Array.from(document.querySelectorAll('#attendeePills .attendee-pill'))
-                    .map(p => p.dataset.email)
-                    .filter(Boolean);
-            }
+        // ---- reusable chips (email) ----
+        function wireEmailChips(inputId, pillsId) {
+            const input = document.getElementById(inputId);
+            const pills = document.getElementById(pillsId);
 
             input.addEventListener('keydown', (e) => {
                 if (e.key !== 'Enter') return;
                 e.preventDefault();
-
                 const raw = (input.value || '').trim().toLowerCase();
                 if (!raw) return;
-
                 const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
                 if (!okEmail) { input.value = ''; return; }
-
-                if (allEmails().includes(raw)) { input.value = ''; return; }
+                const exists = Array.from(pills.querySelectorAll('.attendee-pill')).some(p => p.dataset.email === raw);
+                if (exists) { input.value = ''; return; }
 
                 const span = document.createElement('span');
                 span.className = 'badge bg-primary attendee-pill';
@@ -258,23 +337,24 @@
                 span.innerHTML = `${raw} <button type="button" class="btn-close btn-close-white ms-2" aria-label="Remove"></button>`;
                 span.querySelector('button').addEventListener('click', () => span.remove());
                 pills.appendChild(span);
-
                 input.value = '';
             });
-        })();
 
-        // ---- load rooms from /api/rooms ----
-        async function loadRooms() {
-            const sel = document.getElementById('meetingRoom');
+            return () => Array.from(pills.querySelectorAll('.attendee-pill'))
+                .map(p => p.dataset.email).filter(Boolean);
+        }
+        const getBookEmails = wireEmailChips('meetingAttendees', 'attendeePills');
+        const getUdEmails = wireEmailChips('udAttendees', 'udAttendeePills');
+
+        // ---- load rooms (used by both forms) ----
+        async function loadRoomsInto(selectId) {
+            const sel = document.getElementById(selectId);
             sel.innerHTML = '<option value="">Loading…</option>';
             try {
                 const res = await authedFetch('/api/rooms');
                 if (!res.ok) throw new Error(await res.text());
-                const rooms = await res.json(); // [{id,name,capacity,...}]
-                if (!Array.isArray(rooms) || rooms.length === 0) {
-                    sel.innerHTML = '<option value="">No rooms found</option>';
-                    return;
-                }
+                const rooms = await res.json();
+                if (!rooms?.length) { sel.innerHTML = '<option value="">No rooms found</option>'; return; }
                 sel.innerHTML = '<option value="">Select a room</option>';
                 rooms.forEach(r => {
                     const opt = document.createElement('option');
@@ -288,13 +368,13 @@
             }
         }
 
-        // ---- availability helper (format local time) ----
+        // ---- availability helper ----
         function fmtTime(iso) {
             const d = new Date(iso);
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // ---- load availability from /api/meetings/availability ----
+        // ---- availability ----
         async function loadAvailability() {
             const body = document.getElementById('availBody');
             const dateStr = document.getElementById('meetingDate').value;
@@ -313,35 +393,25 @@
             }
             const to = new Date(from.getTime() + dur * 60000);
 
-            const qs = new URLSearchParams({
-                fromUtc: from.toISOString(),
-                toUtc: to.toISOString()
-            });
+            const qs = new URLSearchParams({ fromUtc: from.toISOString(), toUtc: to.toISOString() });
             if (roomVal) qs.set('roomId', roomVal);
 
             try {
                 const res = await authedFetch(`/api/meetings/availability?${qs.toString()}`);
-
-                if (res.status === 404 || res.status === 501) {
-                    body.innerHTML = '<tr><td colspan="3" class="text-muted">Availability API not implemented yet.</td></tr>';
-                    return;
-                }
                 if (!res.ok) throw new Error(await res.text());
-
                 const data = await res.json();
                 if (!Array.isArray(data) || data.length === 0) {
                     body.innerHTML = '<tr><td colspan="3" class="text-muted">No rooms for this window.</td></tr>';
                     return;
                 }
-
                 body.innerHTML = data.map(r => {
                     const status = (r.status || '').toLowerCase();
                     const badge = status === 'free' ? 'bg-success' : 'bg-danger';
                     return `<tr>
-                                    <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
-                                    <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
-                                    <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
-                                </tr>`;
+                <td>${fmtTime(r.fromUtc)} – ${fmtTime(r.toUtc)}</td>
+                <td>${r.roomName ?? r.name ?? ('Room ' + (r.roomId ?? ''))}</td>
+                <td><span class="badge ${badge}">${r.status ?? ''}</span></td>
+              </tr>`;
                 }).join('');
             } catch (err) {
                 console.error(err);
@@ -349,63 +419,66 @@
             }
         }
 
-        /* ===== Agenda (SIMPLE ITEMS) ===== */
-        const agenda = []; // array of strings
-
-        function escapeHtml(s) {
-            return (s || '').replace(/[&<>"']/g, ch =>
-                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-        }
-
+        // ===== Agenda (BOOK form) =====
+        const agenda = [];
+        function escapeHtml(s) { return (s || '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) }
         function renderAgenda() {
             const list = document.getElementById('agendaList');
-            if (!agenda.length) {
-                list.innerHTML = '<li class="list-group-item text-muted">No items yet.</li>';
-            } else {
+            if (!agenda.length) { list.innerHTML = '<li class="list-group-item text-muted">No items yet.</li>'; }
+            else {
                 list.innerHTML = agenda.map((t, i) => `
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>${escapeHtml(t)}</span>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}" title="Remove">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </li>
-                            `).join('');
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${escapeHtml(t)}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${i}">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </li>`).join('');
                 list.querySelectorAll('[data-remove]').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        agenda.splice(parseInt(btn.dataset.remove, 10), 1);
-                        renderAgenda();
-                    });
+                    btn.addEventListener('click', () => { agenda.splice(parseInt(btn.dataset.remove, 10), 1); renderAgenda(); });
                 });
             }
             document.getElementById('agendaCount').textContent = 'Items: ' + agenda.length;
         }
-
         function addAgendaItem() {
             const input = document.getElementById('agendaItem');
-            const text = (input.value || '').trim();
-            if (!text) return;
-            agenda.push(text);
-            input.value = '';
-            renderAgenda();
+            const text = (input.value || '').trim(); if (!text) return;
+            agenda.push(text); input.value = ''; renderAgenda();
         }
+        function buildAgendaText() { return agenda.length ? agenda.map((t, i) => `${i + 1}. ${t}`).join('\n') : ''; }
 
-        function buildAgendaText() {
-            // A single multiline string: "1. item\n2. item\n..."
-            return agenda.length ? agenda.map((t, i) => `${i + 1}. ${t}`).join('\n') : '';
+        // ===== Agenda (UPDATE form) =====
+        const udAgenda = [];
+        function renderUdAgenda() {
+            const list = document.getElementById('udAgendaList');
+            if (!udAgenda.length) { list.innerHTML = '<li class="list-group-item text-muted">No items yet.</li>'; }
+            else {
+                list.innerHTML = udAgenda.map((t, i) => `
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${escapeHtml(t)}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-udremove="${i}">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </li>`).join('');
+                list.querySelectorAll('[data-udremove]').forEach(btn => {
+                    btn.addEventListener('click', () => { udAgenda.splice(parseInt(btn.dataset.udremove, 10), 1); renderUdAgenda(); });
+                });
+            }
+            document.getElementById('udAgendaCount').textContent = 'Items: ' + udAgenda.length;
         }
+        function udAddAgendaItem() {
+            const input = document.getElementById('udAgendaItem');
+            const text = (input.value || '').trim(); if (!text) return;
+            udAgenda.push(text); input.value = ''; renderUdAgenda();
+        }
+        function parseAgendaToArray(text) { return (text || '').split(/\r?\n/).map(s => s.replace(/^\s*\d+\.\s*/, '').trim()).filter(Boolean); }
+        function buildUdAgendaText() { return udAgenda.length ? udAgenda.map((t, i) => `${i + 1}. ${t}`).join('\n') : ''; }
 
-        // ---- create meeting via /api/meetings ----
+        // ---- BOOK: create meeting ----
         async function bookMeeting(e) {
             e.preventDefault();
             const form = document.getElementById('bookingForm');
-            const errorBox = document.getElementById('bookError');
-            errorBox.textContent = '';
-            attendees: attendeeEmails
-
-            if (!form.checkValidity()) {
-                form.classList.add('was-validated');
-                return;
-            }
+            const errorBox = document.getElementById('bookError'); errorBox.textContent = '';
+            if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
 
             const title = document.getElementById('meetingTitle').value.trim();
             const start = new Date(document.getElementById('meetingDate').value);
@@ -416,61 +489,209 @@
             if (isNaN(start.getTime())) { errorBox.textContent = 'Invalid start date/time.'; return; }
             if (!roomId) { errorBox.textContent = 'Please select a room.'; return; }
 
-            // collect normalized, deduped attendee emails from chips
-            const attendeeEmails = Array.from(document.querySelectorAll('#attendeePills .attendee-pill'))
-                .map(p => (p.dataset.email || '').trim().toLowerCase())
-                .filter(Boolean)
-                .filter((v, i, a) => a.indexOf(v) === i);
-
-            // ---- Build payload (Agenda is a TEXT string) ----
             const dto = {
-                title: title,
-                roomId: roomId,
-                startTime: start.toISOString(),  // UTC
+                title, roomId,
+                startTime: start.toISOString(),
                 durationMinutes: duration,
-                attendeeEmails: attendeeEmails,
-                attendees: attendeeEmails,
+                attendeeEmails: getBookEmails(),
+                attendees: getBookEmails(),
                 agenda: buildAgendaText()
-
             };
 
             const btn = document.getElementById('btnBookNow');
-            const orig = btn.innerHTML;
-            btn.disabled = true;
+            const orig = btn.innerHTML; btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Booking…';
 
             try {
-                const res = await authedFetch('/api/meetings', {
-                    method: 'POST',
-                    body: JSON.stringify(dto)
-                });
-
+                const res = await authedFetch('/api/meetings', { method: 'POST', body: JSON.stringify(dto) });
                 if (res.status === 201) {
-                    const created = await res.json();
-                    const id = created?.id ?? created?.Id;
-
-                    if (id != null) {
-                        window.location.href = `active-meeting.html?id=${encodeURIComponent(id)}`;
-                        return;
-                    }
-                    const loc = res.headers.get('Location');
-                    const match = loc && loc.match(/\/meetings\/(\d+)/i);
-                    if (match) {
-                        window.location.href = `active-meeting.html?id=${match[1]}`;
-                        return;
-                    }
-                    window.location.href = 'active-meeting.html';
-                    return;
+                    const created = await res.json(); const id = created?.id ?? created?.Id;
+                    if (id != null) { window.location.href = `active-meeting.html?id=${encodeURIComponent(id)}`; return; }
+                    const loc = res.headers.get('Location'); const match = loc && loc.match(/\/meetings\/(\d+)/i);
+                    if (match) { window.location.href = `active-meeting.html?id=${match[1]}`; return; }
+                    window.location.href = 'active-meeting.html'; return;
                 }
+                const msg = await res.text(); errorBox.textContent = msg || 'Booking failed.';
+            } catch (err) { console.error(err); errorBox.textContent = 'Network error while booking.'; }
+            finally { btn.disabled = false; btn.innerHTML = orig; }
+        }
 
-                const msg = await res.text();
-                errorBox.textContent = msg || 'Booking failed.';
-            } catch (err) {
-                console.error(err);
-                errorBox.textContent = 'Network error while booking.';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = orig;
+        // ===== UPDATE / DELETE =====
+        let currentMeetingId = null;
+        let currentOrganizerId = null;
+
+        function labelCurrentMeeting(m) {
+            document.getElementById('udCurrentLabel').textContent =
+                `#${m.id} – ${m.title} (${new Date(m.startTime).toLocaleString()})`;
+        }
+
+        async function loadMeetingIntoUpdateForm(id) {
+            const err = document.getElementById('udError'); err.textContent = '';
+            try {
+                const res = await authedFetch(`/api/meetings/${id}`);
+                if (!res.ok) { err.textContent = res.status === 404 ? 'Meeting not found.' : 'Failed to load meeting.'; return; }
+                const m = await res.json();
+                currentMeetingId = m.id ?? id;
+                currentOrganizerId = m.organizerId ?? null;
+
+                // show form
+                document.getElementById('udFormWrap').style.display = '';
+
+                // title & date
+                document.getElementById('udTitle').value = m.title || '';
+                const d = new Date(m.startTime);
+                const pad = n => String(n).padStart(2, '0');
+                document.getElementById('udDate').value =
+                    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+                // duration
+                const end = m.endTime ? new Date(m.endTime) : null;
+                const dur = end ? Math.max(1, Math.round((end - d) / 60000)) : (m.durationMinutes || 60);
+                document.getElementById('udDuration').value = dur;
+
+                // room (ensure rooms loaded first)
+                await loadRoomsInto('udRoom');
+                const rid = m.roomId ?? m.room?.id;
+                if (rid) document.getElementById('udRoom').value = String(rid);
+
+                // attendees
+                document.getElementById('udAttendeePills').innerHTML = '';
+                try {
+                    const ares = await authedFetch(`/api/meetings/${id}/attendees`);
+                    if (ares.ok) {
+                        const rows = await ares.json();
+                        rows.forEach(r => {
+                            if (r?.name) {
+                                const pills = document.getElementById('udAttendeePills');
+                                const span = document.createElement('span');
+                                span.className = 'badge bg-primary attendee-pill';
+                                const email = String(r.name).toLowerCase();
+                                span.dataset.email = email;
+                                span.innerHTML = `${email} <button type="button" class="btn-close btn-close-white ms-2"></button>`;
+                                span.querySelector('button').addEventListener('click', () => span.remove());
+                                pills.appendChild(span);
+                            }
+                        });
+                    }
+                } catch { }
+
+                // agenda
+                udAgenda.splice(0, udAgenda.length, ...parseAgendaToArray(m.agenda));
+                renderUdAgenda();
+
+                labelCurrentMeeting(m);
+            } catch (e) { console.error(e); err.textContent = 'Network error while loading meeting.'; }
+        }
+
+        async function updateMeeting(e) {
+            e.preventDefault();
+            const err = document.getElementById('udError'); err.textContent = '';
+            if (!currentMeetingId) { err.textContent = 'No meeting loaded.'; return; }
+
+            const title = (document.getElementById('udTitle').value || '').trim();
+            const start = new Date(document.getElementById('udDate').value);
+            const duration = parseInt(document.getElementById('udDuration').value, 10) || 60;
+            const roomId = parseInt(document.getElementById('udRoom').value, 10) || 0;
+            const attendeeEmails = (wireEmailChips, getUdEmails) && getUdEmails(); // already wired
+
+            if (!title || !roomId || isNaN(start.getTime())) {
+                err.textContent = 'Please provide valid title, date/time, and room.'; return;
+            }
+
+            const dto = {
+                title,
+                startTime: start.toISOString(),
+                durationMinutes: duration,
+                roomId,
+                attendees: attendeeEmails,
+                attendeeIds: [],
+                agenda: buildUdAgendaText()
+            };
+            if (currentOrganizerId && Number.isInteger(currentOrganizerId) && currentOrganizerId > 0) {
+                dto.organizerId = currentOrganizerId;
+            }
+
+            const btn = document.getElementById('btnUpdateMeeting');
+            const orig = btn.innerHTML; btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating…';
+
+            try {
+                const res = await authedFetch(`/api/meetings/${currentMeetingId}`, { method: 'PUT', body: JSON.stringify(dto) });
+                if (res.status === 204) {
+                    document.getElementById('udCurrentLabel').textContent =
+                        `#${currentMeetingId} – ${title} (${start.toLocaleString()})`;
+                } else if (res.status === 409) {
+                    const msg = await res.text(); err.textContent = msg || 'Room is already booked for that time.';
+                } else {
+                    const msg = await res.text(); err.textContent = msg || 'Update failed.';
+                }
+            } catch (e) { console.error(e); err.textContent = 'Network error while updating.'; }
+            finally { btn.disabled = false; btn.innerHTML = orig; }
+        }
+
+        async function deleteMeeting() {
+            const err = document.getElementById('udError'); err.textContent = '';
+            if (!currentMeetingId) { err.textContent = 'No meeting loaded.'; return; }
+            if (!confirm('Delete this meeting? This cannot be undone.')) return;
+
+            const btn = document.getElementById('btnDeleteMeeting');
+            const orig = btn.innerHTML; btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting…';
+
+            try {
+                const res = await authedFetch(`/api/meetings/${currentMeetingId}`, { method: 'DELETE' });
+                if (res.status === 204) {
+                    // reset update box
+                    currentMeetingId = null; currentOrganizerId = null;
+                    document.getElementById('udFormWrap').style.display = 'none';
+                    document.getElementById('udResultsBody').innerHTML =
+                        '<tr><td colspan="5" class="text-muted">Use Find, then click Load…</td></tr>';
+                } else {
+                    const msg = await res.text(); err.textContent = msg || 'Delete failed.';
+                }
+            } catch (e) { console.error(e); err.textContent = 'Network error while deleting.'; }
+            finally { btn.disabled = false; btn.innerHTML = orig; }
+        }
+
+        async function searchMeetings() {
+            const body = document.getElementById('udResultsBody');
+            body.innerHTML = '<tr><td colspan="5" class="text-muted">Searching…</td></tr>';
+
+            const dateVal = document.getElementById('udSearchDate').value;
+            const qVal = (document.getElementById('udSearchText').value || '').trim();
+
+            const params = new URLSearchParams();
+            if (dateVal) { const d = new Date(dateVal + 'T00:00:00'); params.set('date', d.toISOString()); }
+            if (qVal) params.set('q', qVal);
+
+            try {
+                const res = await authedFetch(`/api/meetings/search?${params.toString()}`);
+                if (!res.ok) throw new Error(await res.text());
+                const rows = await res.json();
+                if (!rows.length) { body.innerHTML = '<tr><td colspan="5" class="text-muted">No results.</td></tr>'; return; }
+
+                body.innerHTML = rows.map(m => `
+              <tr>
+                <td>${m.id}</td>
+                <td>${escapeHtml(m.title)}</td>
+                <td>${new Date(m.startTime).toLocaleString()}</td>
+                <td>${escapeHtml(m.room || '')}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary" data-load="${m.id}">
+                    <i class="bi bi-download me-1"></i>Load
+                  </button>
+                </td>
+              </tr>`).join('');
+
+                body.querySelectorAll('[data-load]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        await loadMeetingIntoUpdateForm(parseInt(btn.dataset.load, 10));
+                        document.getElementById('updateForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                });
+            } catch (e) {
+                console.error(e);
+                body.innerHTML = '<tr><td colspan="5" class="text-danger">Search failed.</td></tr>';
             }
         }
 
@@ -487,7 +708,8 @@
         // ---- page init ----
         document.addEventListener('DOMContentLoaded', async () => {
             wireSignOut();
-            await loadRooms();
+            await loadRoomsInto('meetingRoom');
+            await loadRoomsInto('udRoom');
 
             document.getElementById('bookingForm').addEventListener('submit', bookMeeting);
             document.getElementById('btnCancel').addEventListener('click', () => (window.location.href = 'index.html'));
@@ -497,17 +719,29 @@
                 document.getElementById(id)?.addEventListener('change', loadAvailability);
             });
 
-            // Agenda triggers
+            // Agenda triggers (book)
             document.getElementById('btnAddAgenda')?.addEventListener('click', addAgendaItem);
             document.getElementById('agendaItem')?.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); addAgendaItem(); }
             });
 
-            // Initial render
+            // Agenda triggers (update)
+            document.getElementById('btnUdAddAgenda')?.addEventListener('click', udAddAgendaItem);
+            document.getElementById('udAgendaItem')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); udAddAgendaItem(); }
+            });
+
+            // Search + Update/Delete handlers
+            document.getElementById('btnSearchMeetings').addEventListener('click', searchMeetings);
+            document.getElementById('updateForm').addEventListener('submit', updateMeeting);
+            document.getElementById('btnDeleteMeeting').addEventListener('click', deleteMeeting);
+
+            // Initial UI
             loadAvailability();
             renderAgenda();
+            renderUdAgenda();
+            document.getElementById('udSearchDate').value = new Date().toISOString().slice(0, 10);
         });
     </script>
-
 </body>
 </html>
