@@ -69,7 +69,7 @@ namespace SmartMeetingRoom1
             builder.Services.AddScoped<IMeeting, IMeetingServices>();
             builder.Services.AddScoped<IRoom, IRoomServices>();
             builder.Services.AddScoped<IUser, IUserServices>();
-            builder.Services.AddScoped<INotification, INotificationServices>();
+            builder.Services.AddScoped<INotification, INotificationService>();
             builder.Services.AddScoped<IMinute, IMinuteServices>();
             builder.Services.AddScoped<IMeetingAttendee, IMeetingAttendeeServices>();
             builder.Services.AddScoped<IActionItem, IActionItemServices>();

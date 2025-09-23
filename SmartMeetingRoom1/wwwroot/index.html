@@ -9,7 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
 
-    <!-- Your theme CSS (served by ASP.NET Core static files) -->
+    <!-- Your theme CSS -->
     <link href="/css/style.css" rel="stylesheet" />
     <link href="/css/custom.css" rel="stylesheet" />
 </head>
@@ -141,29 +141,31 @@
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="upcomingBody">
-                                        <!-- Filled by JS; falls back to empty if API not available -->
-                                    </tbody>
+                                    <tbody id="upcomingBody"></tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Notifications (static placeholders for now) -->
+                <!-- Notifications -->
                 <div class="col-lg-4">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Notifications</h5>
-                            <div class="list-group list-group-flush" id="listNotifications">
-                                <div class="list-group-item d-flex justify-content-between align-items-start">
-                                    <div class="ms-2 me-auto">
-                                        <div class="fw-bold">Welcome</div>
-                                        You’re signed in to SmartMeet
-                                    </div>
-                                    <small class="text-muted">now</small>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Notifications</h5>
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Notifications filter">
+                                    <button id="btnNotiUnread" type="button" class="btn btn-outline-primary active">Unread</button>
+                                    <button id="btnNotiAll" type="button" class="btn btn-outline-secondary">All</button>
+                                    <button id="btnNotiRefresh" type="button" class="btn btn-outline-dark" title="Refresh">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
                                 </div>
                             </div>
+                            <div class="list-group list-group-flush mt-2" id="listNotifications">
+                                <div class="list-group-item text-muted small">Loading…</div>
+                            </div>
+                            <div class="small text-muted mt-2" id="notiHint">Click a notification to open and mark it read.</div>
                         </div>
                     </div>
                 </div>
@@ -197,11 +199,8 @@
 
     <!-- Vendor JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Your helper (optional if you have it) -->
     <script src="/js/main.js"></script>
 
-    <!-- Inline page logic -->
     <!-- Inline page logic -->
     <script>
         // --- Auth helpers ---
@@ -245,7 +244,7 @@
             });
         }
 
-        // --- Upcoming (optional) ---
+        // --- Upcoming ---
         async function loadUpcomingMeetings() {
             try {
                 const res = await authedFetch('/api/meetings/upcoming');
@@ -260,34 +259,25 @@
                     return;
                 }
 
-                // small helper to avoid breaking HTML with user text
-                const esc = s => (s || '').replace(/[&<>"']/g, c => ({
-                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-                }[c]));
-
+                const esc = s => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
                 for (const m of items) {
                     const start = m.startTime ? new Date(m.startTime) : null;
                     const timeStr = start ? start.toLocaleString() : '';
                     const title = esc(m.title ?? '');
                     const room = esc(m.room?.name ?? m.roomName ?? '');
-
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-            <td>${timeStr}</td>
-            <td>${title}</td>
-            <td>${room}</td>
-            <td>
-              <a class="btn btn-sm btn-success me-1"
-                 href="active-meeting.html?id=${m.id}"
-                 title="Open meeting">
-                <i class="bi bi-camera-video"></i>
-              </a>
-              <a class="btn btn-sm btn-outline-primary"
-                 href="minutes.html?meetingId=${m.id}"
-                 title="View minutes">
-                <i class="bi bi-eye"></i>
-              </a>
-            </td>`;
+                            <td>${timeStr}</td>
+                            <td>${title}</td>
+                            <td>${room}</td>
+                            <td>
+                              <a class="btn btn-sm btn-success me-1" href="active-meeting.html?id=${m.id}" title="Open meeting">
+                                <i class="bi bi-camera-video"></i>
+                              </a>
+                              <a class="btn btn-sm btn-outline-primary" href="minutes.html?meetingId=${m.id}" title="View minutes">
+                                <i class="bi bi-eye"></i>
+                              </a>
+                            </td>`;
                     tbody.appendChild(tr);
                 }
             } catch (e) {
@@ -295,58 +285,42 @@
             }
         }
 
-
-        // --- Room availability (with visible states + logs) ---
+        // --- Room availability ---
         const hm = d => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
         async function loadRoomAvailabilityQuick() {
             const wrap = document.getElementById('calendarRooms');
             const now = new Date();
             const to = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-
-            // show loading immediately so the placeholder disappears
             wrap.innerHTML = '<div class="text-muted p-3">Loading room availability…</div>';
 
             try {
-                const qs = new URLSearchParams({
-                    fromUtc: now.toISOString(),
-                    toUtc: to.toISOString()
-                });
-                const url = `/api/meetings/availability?${qs.toString()}`;
-                console.log('GET', url);
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const qs = new URLSearchParams({ fromUtc: now.toISOString(), toUtc: to.toISOString() });
+                const res = await fetch(`/api/meetings/availability?${qs.toString()}`, { headers: { 'Accept': 'application/json' } });
                 if (!res.ok) {
-                    const text = await res.text();
-                    console.error('availability failed:', res.status, text);
                     wrap.innerHTML = `<div class="text-danger p-3">Failed to load availability (${res.status}).</div>`;
                     return;
                 }
-
-                const rows = await res.json(); // expect [{roomId, roomName, fromUtc, toUtc, status}]
-                console.log('availability rows:', rows);
-
+                const rows = await res.json();
                 if (!Array.isArray(rows) || rows.length === 0) {
                     wrap.innerHTML = '<div class="text-center text-muted p-5">No rooms defined.</div>';
                     return;
                 }
-
                 wrap.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <div class="small text-muted">Window: ${hm(now)} – ${hm(to)}</div>
-                  <button id="btnRefreshAvail" class="btn btn-sm btn-outline-secondary">Refresh</button>
-                </div>
-                <div class="row g-3">
-                  ${rows.map(r => `
-                    <div class="col-sm-6 col-md-4 col-lg-3">
-                      <div class="border rounded p-3 h-100">
-                        <div class="fw-semibold mb-1">${(r.roomName || 'Room ' + r.roomId)}</div>
-                        <span class="badge ${r.status === 'Free' ? 'bg-success' : 'bg-danger'}">${r.status}</span>
-                        <div class="small text-muted mt-2">${hm(r.fromUtc)} – ${hm(r.toUtc)}</div>
-                      </div>
-                    </div>
-                  `).join('')}
-                </div>
-              `;
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <div class="small text-muted">Window: ${hm(now)} – ${hm(to)}</div>
+                          <button id="btnRefreshAvail" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                        </div>
+                        <div class="row g-3">
+                          ${rows.map(r => `
+                            <div class="col-sm-6 col-md-4 col-lg-3">
+                              <div class="border rounded p-3 h-100">
+                                <div class="fw-semibold mb-1">${(r.roomName || 'Room ' + r.roomId)}</div>
+                                <span class="badge ${r.status === 'Free' ? 'bg-success' : 'bg-danger'}">${r.status}</span>
+                                <div class="small text-muted mt-2">${hm(r.fromUtc)} – ${hm(r.toUtc)}</div>
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>`;
                 document.getElementById('btnRefreshAvail')?.addEventListener('click', loadRoomAvailabilityQuick);
             } catch (e) {
                 console.error('availability exception:', e);
@@ -354,18 +328,111 @@
             }
         }
 
+        // ===== Notifications (polling) =====
+        let showUnreadOnly = true;
+
+        function relTime(iso) {
+            try {
+                const d = new Date(iso);
+                const diff = (Date.now() - d.getTime()) / 1000; // seconds
+                if (diff < 60) return 'now';
+                if (diff < 3600) return Math.floor(diff / 60) + 'm';
+                if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+                return d.toLocaleDateString();
+            } catch { return ''; }
+        }
+
+        async function fetchNotifications() {
+            const qs = new URLSearchParams({ unreadOnly: showUnreadOnly ? 'true' : 'false', take: '20' });
+            const res = await authedFetch('/api/notifications?' + qs.toString());
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }
+
+        function renderNotifications(items) {
+            const list = document.getElementById('listNotifications');
+            list.innerHTML = '';
+            if (!Array.isArray(items) || items.length === 0) {
+                list.innerHTML = '<div class="list-group-item text-muted small">No notifications</div>';
+                return;
+            }
+            const esc = s => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            for (const n of items) {
+                const a = document.createElement('a');
+                a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-start';
+                a.href = n.link || '#';
+                a.dataset.id = n.id;
+                a.innerHTML = `
+                        <div class="ms-2 me-auto">
+                          <div class="fw-semibold ${n.isRead ? 'text-muted' : ''}">${esc(n.title)}</div>
+                          <div class="small ${n.isRead ? 'text-muted' : ''}">${esc(n.message)}</div>
+                        </div>
+                        <small class="text-muted">${relTime(n.createdAt)}</small>
+                    `;
+                a.addEventListener('click', async (e) => {
+                    // mark read and let navigation happen if link is present
+                    e.preventDefault();
+                    try { await authedFetch('/api/notifications/' + n.id + '/read', { method: 'POST' }); }
+                    finally {
+                        if (n.link) location.href = n.link;
+                        else { // just update list
+                            loadNotifications();
+                        }
+                    }
+                });
+                list.appendChild(a);
+            }
+        }
+
+        async function loadNotifications() {
+            const list = document.getElementById('listNotifications');
+            list.innerHTML = '<div class="list-group-item text-muted small">Loading…</div>';
+            try {
+                const items = await fetchNotifications();
+                renderNotifications(items);
+            } catch (err) {
+                list.innerHTML = '<div class="list-group-item text-danger small">Failed to load notifications</div>';
+                console.error('notifications', err);
+            }
+        }
+
+        function wireNotificationsUI() {
+            const btnUnread = document.getElementById('btnNotiUnread');
+            const btnAll = document.getElementById('btnNotiAll');
+            const btnRefresh = document.getElementById('btnNotiRefresh');
+
+            btnUnread?.addEventListener('click', () => {
+                showUnreadOnly = true;
+                btnUnread.classList.add('active');
+                btnAll.classList.remove('active');
+                loadNotifications();
+            });
+            btnAll?.addEventListener('click', () => {
+                showUnreadOnly = false;
+                btnAll.classList.add('active');
+                btnUnread.classList.remove('active');
+                loadNotifications();
+            });
+            btnRefresh?.addEventListener('click', loadNotifications);
+
+            // Poll every 15s (unread by default)
+            loadNotifications();
+            setInterval(() => {
+                if (showUnreadOnly) loadNotifications();
+            }, 15000);
+        }
+
+        // --- Init ---
         document.addEventListener('DOMContentLoaded', async () => {
             wireQuickButtons();
             const me = await guardSignedIn();
             if (!me) return;
 
-            // Always try to load; any error shows on the page and logs in console
+            wireNotificationsUI();
             await loadRoomAvailabilityQuick();
             setInterval(loadRoomAvailabilityQuick, 60_000);
             loadUpcomingMeetings();
         });
     </script>
-
-
 </body>
 </html>

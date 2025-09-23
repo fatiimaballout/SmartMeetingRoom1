@@ -76,6 +76,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>
 
 
 
+        modelBuilder.Entity<Notification>()
+            .HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
+
+
         // Attachment -> Meeting
         // Attachments ↔ Meeting  (optional FK; null out on meeting delete)
         modelBuilder.Entity<Attachment>()

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SmartMeetingRoom1.Dtos;
 using SmartMeetingRoom1.Interfaces;
 
@@ -40,12 +41,35 @@ public class RoomsController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, [FromServices] AppDbContext db)
     {
-        var ok = await _service.DeleteAsync(id);
-        if (!ok) return NotFound();
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        // delete dependents of meetings in this room
+        var meetingIds = await db.Meetings
+            .Where(m => m.RoomId == id)
+            .Select(m => m.Id)
+            .ToListAsync();
+
+        if (meetingIds.Count > 0)
+        {
+            await db.MeetingAttendees.Where(a => meetingIds.Contains(a.MeetingId)).ExecuteDeleteAsync();
+            await db.Minutes.Where(x => meetingIds.Contains(x.MeetingId)).ExecuteDeleteAsync();
+
+
+            await db.Meetings.Where(m => m.RoomId == id).ExecuteDeleteAsync();
+        }
+
+        var room = await db.Rooms.FindAsync(id);
+        if (room is null) return NotFound();
+
+        db.Rooms.Remove(room);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+
         return NoContent();
     }
+
 
 
     [HttpGet] // GET /api/rooms

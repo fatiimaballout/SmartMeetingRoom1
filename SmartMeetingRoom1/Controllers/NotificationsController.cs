@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SmartMeetingRoom1.Dtos;
 using SmartMeetingRoom1.Interfaces;
+using System.Security.Claims;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -45,7 +46,21 @@ public class NotificationsController : ControllerBase
         }
         catch (ArgumentException ex) { return BadRequest(ex.Message); }
     }
+    [HttpGet]
+    public async Task<IActionResult> List([FromQuery] bool unreadOnly = false, [FromQuery] int take = 20)
+    {
+        int uid = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var rows = await _service.ListAsync(uid, unreadOnly, take);
+        return Ok(rows);
+    }
 
+    [HttpPost("{id:int}/read")]
+    public async Task<IActionResult> MarkRead(int id)
+    {
+        int uid = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var ok = await _service.MarkReadAsync(id, uid);
+        return ok ? NoContent() : NotFound();
+    }
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin,Employee")]
     public async Task<IActionResult> Delete(int id)

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SmartMeetingRoom1.Dtos;
 using SmartMeetingRoom1.Interfaces;
 using SmartMeetingRoom1.Models;
@@ -14,15 +15,18 @@ public class UsersController : ControllerBase
     private readonly IUser _service;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole<int>> _roleManager;
+    private readonly AppDbContext _db;
 
     public UsersController(
         IUser service,
+        AppDbContext db,
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole<int>> roleManager)
     {
         _service = service;
         _userManager = userManager;
         _roleManager = roleManager;
+        _db = db;
     }
 
     // ---------------- Existing (kept) ----------------
@@ -227,21 +231,31 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteEmployee(int id)
     {
-        var user = await _userManager.FindByIdAsync(id.ToString());
-        if (user == null) return NotFound();
+        var user = await _db.Users.FindAsync(id);
+        if (user is null) return NotFound("User not found.");
 
-        var currentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (currentId == user.Id.ToString())
-            return BadRequest("You cannot delete your own account.");
+        // AsNoTracking for read-only queries
+        var orgCount = await _db.Meetings
+            .AsNoTracking()
+            .CountAsync(m => m.OrganizerId == id);
 
-        var roles = await _userManager.GetRolesAsync(user);
-        if (!roles.Contains("Employee")) return Forbid();
+        var attCount = await _db.MeetingAttendees
+            .AsNoTracking()
+            .CountAsync(a => a.UserId == id);
 
-        var del = await _userManager.DeleteAsync(user);
-        if (!del.Succeeded) return BadRequest(del.Errors);
+        if (orgCount > 0 || attCount > 0)
+        {
+            return Conflict(
+                $"Cannot delete. User is organizer of {orgCount} meeting(s) and " +
+                $"attendee in {attCount} meeting(s). Reassign/cancel or remove the " +
+                $"user from those meetings, then try again.");
+        }
 
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
         return NoContent();
     }
+
 
     // POST /api/users/{id}/password  (admin reset any user)
     [HttpPost("{id:int}/password")]
